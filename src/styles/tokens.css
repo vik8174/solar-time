@@ -1,0 +1,56 @@
+/*
+ * tokens.css — single source of truth for the visual system.
+ * Warm minimal palette from the PRD; auto dark/light via prefers-color-scheme.
+ * Components reference only these variables, never raw hex.
+ */
+
+:root {
+  /* palette — dark (default) */
+  --bg: #0d0d0d;
+  --text: #f5f0e8;
+  --accent: #e8a923;
+  --axis: #3a3a3a;
+  --muted: #8a8175;
+  --muted-dim: #5c554b;
+  --hairline: #1a1917;
+
+  /* type */
+  --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #faf6ee;
+    --text: #23201a;
+    --accent: #b57e0a;
+    --axis: #d8cfbf;
+    --muted: #7a7264;
+    --muted-dim: #a99f8d;
+    --hairline: #ece4d4;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

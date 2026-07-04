@@ -1,0 +1,76 @@
+---
+/**
+ * HeroNumber — the headline answer: the signed deviation (or "In sync"),
+ * a one-line explanation, and the real solar-noon time.
+ *
+ * Presentational only. Values come from the view model; `data-*` hooks let the
+ * client recompute patch them in place without a re-render.
+ */
+interface Props {
+  heroValue: string;
+  showUnit: boolean;
+  leadText: string;
+  solarNoonText: string;
+}
+const { heroValue, showUnit, leadText, solarNoonText } = Astro.props;
+---
+
+<div class="hero-block">
+  <h1 class="hero" class:list={[{ synced: !showUnit }]}>
+    <span data-hero-value>{heroValue}</span><span class="unit" data-hero-unit hidden={!showUnit}
+      >min</span
+    >
+  </h1>
+  <p class="lead" data-lead>{leadText}</p>
+  <p class="solar-noon" data-solar-noon>{solarNoonText}</p>
+</div>
+
+<style>
+  .hero-block {
+    text-align: center;
+  }
+  .hero {
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: clamp(56px, 17vw, 104px);
+    line-height: 0.92;
+    letter-spacing: -0.02em;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+    animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .hero.synced {
+    font-size: clamp(32px, 9vw, 52px);
+  }
+  .unit {
+    font-size: 0.34em;
+    color: var(--muted);
+    letter-spacing: 0;
+    margin-left: 0.15em;
+  }
+  .lead {
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--text);
+    max-width: 40ch;
+    margin: 20px auto 0;
+    text-wrap: balance;
+  }
+  .solar-noon {
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin: 6px auto 0;
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>

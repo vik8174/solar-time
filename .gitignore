@@ -27,3 +27,7 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# coordinator handoffs — temporary, not part of git history (keep only the README)
+/handoffs/*
+!/handoffs/README.md
