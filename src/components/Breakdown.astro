@@ -1,0 +1,98 @@
+---
+/**
+ * Breakdown — the three additive components of the deviation plus the total.
+ *
+ * Every row is always listed; a zero component renders dimmed (`zero`) rather
+ * than hidden, so the winter DST=0 case still tells the story. `data-*` hooks
+ * let the client recompute update values and dim state in place.
+ */
+import type { BreakdownRow } from '../lib/cityViewModel';
+
+interface Props {
+  rows: BreakdownRow[];
+}
+const { rows } = Astro.props;
+---
+
+<div class="breakdown">
+  {
+    rows.map((r) => (
+      <div
+        class="row"
+        class:list={[r.key, { zero: r.zero, total: r.key === 'total' }]}
+        data-row={r.key}
+      >
+        <span class="label">
+          {r.label}
+          {r.hint && <span class="hint">{r.hint}</span>}
+        </span>
+        <span class="val" data-row-value={r.key}>
+          {r.value}
+        </span>
+      </div>
+    ))
+  }
+</div>
+
+<style>
+  .breakdown {
+    margin: 40px auto 0;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    gap: 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .row.zero .label,
+  .row.zero .val {
+    color: var(--muted-dim);
+  }
+  .row.zero .hint {
+    color: var(--muted-dim);
+  }
+  /* the row just before Total drops its rule — Total's top rule is the divider */
+  .row:has(+ .row.total) {
+    border-bottom: none;
+  }
+  .row.total {
+    border-bottom: none;
+    border-top: 1px solid var(--axis);
+    padding-top: 16px;
+    margin-top: 4px;
+  }
+  .label {
+    font-size: 14px;
+    color: var(--text);
+  }
+  .hint {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+  .val {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .row.total .label {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 12px;
+  }
+  .row.total .val {
+    color: var(--accent);
+    font-size: 18px;
+    font-weight: 600;
+  }
+</style>

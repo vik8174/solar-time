@@ -1,0 +1,130 @@
+---
+/**
+ * City page — pre-rendered per city via SSG, showing the clock-vs-sun deviation.
+ *
+ * The build bakes a correct-at-build snapshot; a client inline script recomputes
+ * for today's date with the same `computeDeviation` (zero network, no layout
+ * shift). Presentation is delegated to HeroNumber / SolarScale / Breakdown.
+ */
+import type { GetStaticPaths } from 'astro';
+
+import Breakdown from '../components/Breakdown.astro';
+import HeroNumber from '../components/HeroNumber.astro';
+import SolarScale from '../components/SolarScale.astro';
+import { CITIES } from '../data/cities';
+import { computeDeviation } from '../domain/solarTime';
+import { buildCityViewModel } from '../lib/cityViewModel';
+import '../styles/tokens.css';
+
+export const getStaticPaths = (() =>
+  CITIES.map((city) => ({
+    params: { city: city.slug },
+    props: { city },
+  }))) satisfies GetStaticPaths;
+
+const { city } = Astro.props;
+
+const deviation = computeDeviation({
+  longitude: city.longitude,
+  timeZone: city.timeZone,
+  date: new Date(),
+});
+const vm = buildCityViewModel({ name: city.name, coords: city.coords }, deviation);
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Solar time in {vm.cityName}</title>
+  </head>
+  <body>
+    <main class="page" data-city-slug={city.slug}>
+      <div class="content">
+        <p class="eyebrow">{vm.cityName} · {vm.coords}</p>
+
+        <HeroNumber
+          heroValue={vm.heroValue}
+          showUnit={vm.showUnit}
+          leadText={vm.leadText}
+          solarNoonText={vm.solarNoonText}
+        />
+
+        <SolarScale geometry={vm.geometry} solarNoonLabel={vm.solarNoonLabel} />
+
+        <Breakdown rows={vm.breakdown} />
+      </div>
+    </main>
+
+    <script>
+      import { getCity } from '../data/cities';
+      import { computeDeviation } from '../domain/solarTime';
+      import { buildCityViewModel } from '../lib/cityViewModel';
+      import { scaleInnerSvg } from '../lib/scaleSvg';
+
+      /**
+       * Recompute for today so a page built days ago never shows a stale number.
+       * Same domain + view model as the build → identical output, no reflow.
+       */
+      const root = document.querySelector<HTMLElement>('[data-city-slug]');
+      const city = root && getCity(root.dataset.citySlug ?? '');
+      if (city) {
+        const vm = buildCityViewModel(
+          { name: city.name, coords: city.coords },
+          computeDeviation({
+            longitude: city.longitude,
+            timeZone: city.timeZone,
+            date: new Date(),
+          }),
+        );
+
+        const setText = (selector: string, text: string): void => {
+          const el = document.querySelector(selector);
+          if (el) el.textContent = text;
+        };
+
+        setText('[data-hero-value]', vm.heroValue);
+        setText('[data-lead]', vm.leadText);
+        setText('[data-solar-noon]', vm.solarNoonText);
+        setText('[data-scale-noon]', vm.solarNoonLabel);
+
+        const unit = document.querySelector<HTMLElement>('[data-hero-unit]');
+        if (unit) unit.hidden = !vm.showUnit;
+        document.querySelector('.hero')?.classList.toggle('synced', !vm.showUnit);
+
+        const scale = document.querySelector('[data-scale]');
+        if (scale) scale.innerHTML = scaleInnerSvg(vm.geometry);
+
+        for (const row of vm.breakdown) {
+          setText(`[data-row-value="${row.key}"]`, row.value);
+          document.querySelector(`[data-row="${row.key}"]`)?.classList.toggle('zero', row.zero);
+        }
+      }
+    </script>
+
+    <style>
+      .page {
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 56px 20px 40px;
+      }
+      .content {
+        width: 100%;
+        max-width: 480px;
+      }
+      .eyebrow {
+        font-family: var(--mono);
+        font-size: 12px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--muted);
+        text-align: center;
+        margin: 0 0 24px;
+      }
+    </style>
+  </body>
+</html>

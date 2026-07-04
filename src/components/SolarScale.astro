@@ -1,0 +1,52 @@
+---
+/**
+ * SolarScale — horizontal time-of-day axis with the solar-noon marker.
+ *
+ * The inner SVG is built by `scaleInnerSvg` (shared with the client recompute)
+ * and injected raw, so build and client draw identical geometry. The root SVG
+ * keeps a fixed viewBox → no layout shift when the client repaints it.
+ */
+import type { ScaleGeometry } from '../lib/scaleGeometry';
+import { scaleInnerSvg } from '../lib/scaleSvg';
+
+interface Props {
+  geometry: ScaleGeometry;
+  solarNoonLabel: string;
+}
+const { geometry, solarNoonLabel } = Astro.props;
+---
+
+<div class="scale">
+  <svg
+    data-scale
+    viewBox={`0 0 ${geometry.width} ${geometry.height}`}
+    role="img"
+    aria-label={`Solar noon at ${solarNoonLabel}, ideal noon at 12:00`}
+    set:html={scaleInnerSvg(geometry)}
+  />
+  <div class="caption">
+    <span>Clock noon</span>
+    <span>Solar noon&nbsp;<span data-scale-noon>{solarNoonLabel}</span></span>
+  </div>
+</div>
+
+<style>
+  .scale {
+    margin: 44px 0 8px;
+  }
+  .scale svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .caption {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-dim);
+    margin-top: 6px;
+  }
+</style>

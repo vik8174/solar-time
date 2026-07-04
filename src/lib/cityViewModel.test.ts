@@ -41,6 +41,7 @@ describe('buildCityViewModel', () => {
     const vm = buildCityViewModel(PRAGUE, summer);
     expect(vm.leadText).toBe('Your clock runs 66 minutes ahead of the sun.');
     expect(vm.solarNoonText).toBe('Real solar noon today is at 13:06.');
+    expect(vm.solarNoonLabel).toBe('13:06');
   });
 
   it('flips the direction wording for a clock behind the sun', () => {

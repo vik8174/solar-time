@@ -40,6 +40,8 @@ export interface CityViewModel {
   leadText: string;
   /** Sentence stating the real solar-noon clock time. */
   solarNoonText: string;
+  /** Bare solar-noon clock label for the scale caption, e.g. "13:06". */
+  solarNoonLabel: string;
   breakdown: BreakdownRow[];
   geometry: ScaleGeometry;
 }
@@ -85,6 +87,7 @@ export const buildCityViewModel = (city: CityIdentity, d: Deviation): CityViewMo
     showUnit: !synced,
     leadText: buildLeadText(d.total),
     solarNoonText: `Real solar noon today is at ${formatClock(d.solarNoon)}.`,
+    solarNoonLabel: formatClock(d.solarNoon),
     breakdown: [
       row('longitude', d.longitudeOffset),
       row('equationOfTime', d.equationOfTime),
