@@ -47,7 +47,14 @@ describe('buildCityViewModel', () => {
   it('flips the direction wording for a clock behind the sun', () => {
     const behind: Deviation = { ...summer, total: -48 };
     expect(buildCityViewModel(PRAGUE, behind).leadText).toBe(
-      'Your clock runs 48 minutes behind of the sun.',
+      'Your clock runs 48 minutes behind the sun.',
+    );
+  });
+
+  it('uses the singular "minute" at exactly one minute of deviation', () => {
+    const oneMinute: Deviation = { ...summer, total: 1 };
+    expect(buildCityViewModel(PRAGUE, oneMinute).leadText).toBe(
+      'Your clock runs 1 minute ahead of the sun.',
     );
   });
 

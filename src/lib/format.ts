@@ -19,6 +19,8 @@ export const signedMinutes = (minutes: number): string => {
   return rounded > 0 ? `+${rounded}` : `-${Math.abs(rounded)}`;
 };
 
+const MINUTES_PER_DAY = 1440;
+
 /**
  * Formats minutes-from-midnight as a 24-hour zero-padded clock time.
  *
@@ -26,7 +28,9 @@ export const signedMinutes = (minutes: number): string => {
  * @returns e.g. "13:06".
  */
 export const formatClock = (minutesFromMidnight: number): string => {
-  const total = Math.round(minutesFromMidnight);
+  // Wrap into a single day so extreme deviations never render "13:-5" or 25:xx.
+  const total =
+    ((Math.round(minutesFromMidnight) % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
   const hours = Math.floor(total / 60);
   const minutes = total % 60;
   const pad = (n: number): string => String(n).padStart(2, '0');

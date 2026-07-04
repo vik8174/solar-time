@@ -35,6 +35,11 @@ describe('formatClock', () => {
   it('rounds to the nearest minute without spilling to :60', () => {
     expect(formatClock(779.6)).toBe('13:00');
   });
+
+  it('wraps values outside a single day back into 00:00–23:59', () => {
+    expect(formatClock(-30)).toBe('23:30');
+    expect(formatClock(1470)).toBe('00:30');
+  });
 });
 
 describe('isInSync', () => {

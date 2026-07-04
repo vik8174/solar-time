@@ -60,4 +60,13 @@ describe('scaleWindow', () => {
     expect(scaleWindow(176).max).toBeGreaterThanOrEqual(200);
     expect(Math.abs(176)).toBeLessThanOrEqual(scaleWindow(176).max * 0.85);
   });
+
+  it('falls back to the widest window for extreme (unphysical) deviations', () => {
+    const w = scaleWindow(620);
+    expect(w.max).toBe(720);
+    // beyond the ladder the comfort margin can be exceeded, but the marker
+    // must still land strictly inside the axis rather than off the end.
+    expect(Math.abs(620)).toBeLessThan(w.max);
+    expect(w.ticks).toContain(0);
+  });
 });

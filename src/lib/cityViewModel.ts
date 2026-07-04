@@ -57,8 +57,9 @@ const buildLeadText = (total: number): string => {
   if (isInSync(total)) return 'Your clock matches the sun right now.';
   const magnitude = Math.abs(Math.round(total));
   const unit = magnitude === 1 ? 'minute' : 'minutes';
-  const direction = total > 0 ? 'ahead' : 'behind';
-  return `Your clock runs ${magnitude} ${unit} ${direction} of the sun.`;
+  // "ahead of the sun" but "behind the sun" — the preposition differs by direction.
+  const direction = total > 0 ? 'ahead of' : 'behind';
+  return `Your clock runs ${magnitude} ${unit} ${direction} the sun.`;
 };
 
 /** One breakdown row from a raw component value. */

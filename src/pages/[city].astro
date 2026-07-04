@@ -92,7 +92,7 @@ const vm = buildCityViewModel({ name: city.name, coords: city.coords }, deviatio
 
         const unit = document.querySelector<HTMLElement>('[data-hero-unit]');
         if (unit) unit.hidden = !vm.showUnit;
-        document.querySelector('.hero')?.classList.toggle('synced', !vm.showUnit);
+        document.querySelector('.hero')?.classList.toggle('synced', vm.inSync);
 
         const scale = document.querySelector('[data-scale]');
         if (scale) scale.innerHTML = scaleInnerSvg(vm.geometry);
