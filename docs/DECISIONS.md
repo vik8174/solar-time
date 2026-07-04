@@ -31,6 +31,7 @@ goes stale.
 
 `computeDeviation({ longitude, timeZone, date }) → { longitudeOffset, equationOfTime,
 dst, total, solarNoon }`.
+
 - Sign `+` = clock **ahead** of the sun (noon after 12:00).
 - Additive: `longitudeOffset + equationOfTime + dst === total`.
 - `equationOfTime` field = **negated** classic EoT; helper `equationOfTimeMinutes` = classic (apparent − mean).

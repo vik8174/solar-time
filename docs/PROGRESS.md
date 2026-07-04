@@ -14,9 +14,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
   Zero DOM/IO, serializable, browser-ready.
 - **Public API:** `computeDeviation`, `equationOfTimeMinutes`, `longitudeOffsetMinutes`,
   `offsetMinutes`, `standardOffsetMinutes`, `dstMinutes`.
-- **Contract:** `computeDeviation({ longitude, timeZone, date }) → { longitudeOffset,
-  equationOfTime, dst, total, solarNoon }`. Additive: `longitudeOffset + equationOfTime
-  + dst === total`. Sign `+` = clock ahead of sun. `solarNoon` = minutes from local midnight.
+- **Contract:** `computeDeviation({ longitude, timeZone, date })` returns `{ longitudeOffset, equationOfTime, dst, total, solarNoon }`. Additive: `longitudeOffset + equationOfTime + dst === total`. Sign `+` = clock ahead of sun. `solarNoon` = minutes from local midnight.
 - **Tests:** 19 behavioral tests, 100% coverage. Reference cities Prague/Madrid/Kashgar,
   solstice/equinox EoT, winter/summer DST, on-meridian → total ≈ 0.
 - **Review:** code-reviewer → PASS WITH NOTES.
@@ -32,9 +30,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 - **Hosting:** Firebase Hosting — projects `solar-time-stage` / `solar-time-prod`
   under personal account vik8174@gmail.com. Stage live at
   https://solar-time-stage.web.app (noindex + robots disallow-all).
-- **CI:** `.github/workflows/ci.yml` — `Checks` job (typecheck→lint→format→test→build)
-  + `preview` job (Firebase preview channel, gated on same-repo PRs). Secret
-  `FIREBASE_SERVICE_ACCOUNT_STAGE` set in repo.
+- **CI:** `.github/workflows/ci.yml` — `Checks` job (typecheck→lint→format→test→build) plus a `preview` job (Firebase preview channel, gated on same-repo PRs). Secret `FIREBASE_SERVICE_ACCOUNT_STAGE` set in repo.
 - **Branches:** `main` (default) + `stage`, kept in sync. Flow: feat → PR → squash-merge.
 
 ## Slice #1 — Planning (PRD)
