@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "solar-time-stage",
+    "stage": "solar-time-stage",
+    "prod": "solar-time-prod"
+  }
+}
