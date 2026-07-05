@@ -6,6 +6,27 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Chore — ESLint `strictTypeChecked` + type-aware linting
+
+- **Date:** 2026-07-05
+- **PR:** #24 (merged) · **Issue:** #21 (closed)
+- **What:** ESLint upgraded from `typescript-eslint` `recommended` → `strictTypeChecked`
+  with type-aware linting on (`projectService` + `tsconfigRootDir`). See ADR D-011.
+- **Config:** `**/*.astro` block applies `disableTypeChecked` (no astro type-checked
+  preset); `restrict-template-expressions` set to `allowNumber` for SVG/render code;
+  `no-non-null-assertion` off for `**/*.test.ts` (the `!` from D-010 is necessary there).
+- **Side effects:** `tseslint.config()` → `defineConfig()` (resolves `no-deprecated`);
+  added dev dep `@types/node` (exact 26.1.0) for `import.meta.dirname` under `astro check`.
+- **Verify:** lint / typecheck / test / build all green.
+
+## Chore — Prettier defaults pinned
+
+- **Date:** 2026-07-05
+- **PR:** #23 (merged)
+- **What:** Made two Prettier defaults explicit in `.prettierrc.json` — `trailingComma:
+"all"` and `endOfLine: "lf"`. No reformatting (both already matched Prettier 3 defaults);
+  documents intent and guards against CRLF from non-macOS contributors.
+
 ## Chore — tsconfig tightened to `strictest`
 
 - **Date:** 2026-07-05

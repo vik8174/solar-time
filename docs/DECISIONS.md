@@ -79,3 +79,19 @@ especially before the city dataset (slice #5) which is index-access heavy. **Cos
 and object-index access must be guarded/narrowed, not assumed. Impact when adopted was
 small (12 type-only fixes, PR #20 / issue #19). ESLint gets the symmetric `strictTypeChecked`
 move in issue #21 (future D-011).
+
+## D-011 — ESLint `strictTypeChecked` + type-aware linting · accepted
+
+`eslint.config.js` uses `typescript-eslint`'s `strictTypeChecked` (was `recommended`) with
+type-aware linting enabled (`parserOptions.projectService` + `tsconfigRootDir`). The
+symmetric counterpart to D-010: types and lint are both at the strictest tier. Enables
+bug-class rules (`no-floating-promises`, `no-misused-promises`, `no-unnecessary-condition`,
+`no-unsafe-*`, …). **Config specifics:** `**/*.astro` files get `disableTypeChecked` (the
+astro parser doesn't feed the TS program and there is no astro type-checked preset);
+`restrict-template-expressions` is `{ allowNumber: true }` for number-heavy SVG/render code;
+`no-non-null-assertion` is off for `**/*.test.ts` (the `!` assertions D-010 requires are
+necessary there). **Why config change over edits:** the codebase was already clean
+(0 bug-class hits) — value is preventative. **Side effects:** migrated the deprecated
+`tseslint.config()` helper to ESLint's `defineConfig()`; added `@types/node` (exact 26.1.0)
+so `import.meta.dirname` type-checks under `astro check`. Impact when adopted: 29 lint
+errors, all in 2 rules, all resolved (PR #24 / issue #21).
