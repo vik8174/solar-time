@@ -42,7 +42,7 @@ describe('scaleWindow', () => {
     expect(ticks[ticks.length - 1]).toBe(max);
     expect(ticks).toContain(0);
     for (let i = 1; i < ticks.length; i += 1) {
-      expect(ticks[i] - ticks[i - 1]).toBe(step);
+      expect(ticks[i]! - ticks[i - 1]!).toBe(step);
     }
   });
 

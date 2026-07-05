@@ -19,6 +19,9 @@ export interface ScaleWindow {
   ticks: number[];
 }
 
+/** Widest window — the fallback when the deviation exceeds every tighter preset. */
+const WIDEST: { max: number; step: number } = { max: 720, step: 180 };
+
 /** Round (half-span, step) presets, ascending — the ladder of allowed windows. */
 const LADDER: ReadonlyArray<{ max: number; step: number }> = [
   { max: 30, step: 15 },
@@ -29,7 +32,7 @@ const LADDER: ReadonlyArray<{ max: number; step: number }> = [
   { max: 240, step: 60 },
   { max: 360, step: 120 },
   { max: 480, step: 120 },
-  { max: 720, step: 180 },
+  WIDEST,
 ];
 
 /** Fraction of the half-span the marker may reach before the next window is used. */
@@ -43,8 +46,7 @@ const EDGE_CLEARANCE = 0.85;
  */
 export const scaleWindow = (totalMinutes: number): ScaleWindow => {
   const magnitude = Math.abs(totalMinutes);
-  const fit =
-    LADDER.find((entry) => magnitude <= entry.max * EDGE_CLEARANCE) ?? LADDER[LADDER.length - 1];
+  const fit = LADDER.find((entry) => magnitude <= entry.max * EDGE_CLEARANCE) ?? WIDEST;
 
   const ticks: number[] = [];
   for (let t = -fit.max; t <= fit.max; t += fit.step) {
