@@ -24,6 +24,7 @@
   "devDependencies": {
     "@astrojs/check": "0.9.9",
     "@eslint/js": "10.0.1",
+    "@types/node": "26.1.0",
     "@vitest/coverage-v8": "4.1.9",
     "astro-eslint-parser": "1.4.0",
     "eslint": "10.6.0",
