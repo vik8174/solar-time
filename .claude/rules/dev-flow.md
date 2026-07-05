@@ -1,5 +1,26 @@
 # Dev Flow
 
+## Start a ticket — isolate in a worktree (R-008)
+
+Every ticket runs in its **own git worktree** off a fresh `main`, never in the
+shared primary clone. Provision one with the paved-path script:
+
+```sh
+scripts/ticket-worktree.sh <branch-name>   # e.g. chore/worktree-guardrail
+```
+
+It fetches `origin`, creates `../solar-time-<branch>` on `<branch-name>`
+tracking `origin/main`, and prints the path to `cd` into.
+
+This is enforced by a committed **`pre-commit` git hook**
+([`.githooks/pre-commit`](../../.githooks/pre-commit), wired by the same
+`core.hooksPath` as `pre-push`): it hard-blocks a commit on `main`/`stage` or in
+the primary clone, allowing commits only from a linked worktree on a feature
+branch. `git commit --no-verify` remains an accepted escape hatch — CI is the
+backstop.
+
+## Pre-PR checks
+
 Local checks run **cheapest-first**, so a fast failure (a type error, a lint
 nit) stops you before you spend time on the slower stages. Run them in this
 order before opening a PR:
