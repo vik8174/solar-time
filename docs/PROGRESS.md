@@ -6,6 +6,19 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Chore — tsconfig tightened to `strictest`
+
+- **Date:** 2026-07-05
+- **PR:** #20 (merged) · **Issue:** #19 (closed)
+- **What:** `tsconfig.json` now extends `astro/tsconfigs/strictest` (was `strict`). Adds
+  `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitReturns`,
+  `noFallthroughCasesInSwitch`, `noUnusedLocals/Parameters`, `noImplicitOverride`,
+  `allowUnreachableCode:false`, `allowUnusedLabels:false`. See ADR D-010.
+- **Fixes:** 12 `noUncheckedIndexedAccess` errors — `scaleWindow.ts` (named `WIDEST`
+  fallback constant instead of an indexed one) + `cityViewModel.test.ts` /
+  `scaleWindow.test.ts`. Type-only, behavior unchanged. `.astro` files needed no changes.
+- **Verify:** `astro check` 0 errors, tests green.
+
 ## Slice #4 — City page `/[city]` end-to-end (Prague)
 
 - **Date:** 2026-07-04
