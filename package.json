@@ -9,6 +9,7 @@
     "prepare": "test -z \"$CI\" && git config core.hooksPath .githooks || true",
     "dev": "astro dev",
     "build": "astro build",
+    "build:cities": "tsx scripts/buildCities.ts",
     "preview": "astro preview",
     "astro": "astro",
     "typecheck": "astro check",
@@ -34,6 +35,7 @@
     "globals": "17.7.0",
     "prettier": "3.9.4",
     "prettier-plugin-astro": "0.14.1",
+    "tsx": "4.20.6",
     "typescript": "6.0.3",
     "typescript-eslint": "8.62.1",
     "vitest": "4.1.9"
