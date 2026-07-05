@@ -109,3 +109,17 @@ generated tables (rewritten by slice #5) with no hand-written logic; components/
 `.astro`. **Assumption:** the gate stays meaningful only while logic lives in `src/lib` /
 `src/domain` — a future logic dir must be added to `coverage.include` or it escapes the gate.
 Impact when adopted: config + hook + docs only, no source changes (PR #29 / issue #26).
+
+## D-013 — City-page bundle isolation (inline data, no registry import) · accepted
+
+City pages (`[city].astro`) inline their own city's data (`longitude`, `timeZone`, `name`,
+`coords`) into `data-*` attributes at build time; the client island reads them from the DOM
+instead of `import`-ing the city registry. **Why:** with a ~1000-city dataset (slice #5,
+D-004 shape) importing `getCity` would pull the whole registry into the island bundle. Each
+page only needs its own city, so inlining keeps the island tiny — verified single island
+bundle 4.7 KB, zero city names in `dist/**/*.js`. The full dataset stays build-time only
+(`getStaticPaths`) plus the future home page (`/`, live geo). **Invariant (R-001):** the
+island stays a thin caller of `cityViewModel` → `computeDeviation` (the SSOT); inlining
+changes only _where the inputs come from_, not the compute path. **Assumption:** any new
+per-page client logic must read from `data-*` / props, not re-import the registry, or the
+bundle win regresses. Adopted with slice #5 (PR #31 / issue #5).

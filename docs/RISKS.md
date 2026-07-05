@@ -11,8 +11,10 @@ than deleting — the trail matters.
 script and the build-time path ever diverge, users see a flicker or a wrong number.
 **Mitigation:** both use the exact same `computeDeviation` (SSOT, D-003/D-004).
 **Implemented in slice #4 (PR #17):** build and client both call `cityViewModel` →
-`computeDeviation`; the inline script is a thin caller with no re-implementation. Keep
-this invariant when the dataset grows in slice #5.
+`computeDeviation`; the inline script is a thin caller with no re-implementation.
+**Held in slice #5 (PR #31):** the ~1000-city dataset did not break it — the island now
+reads inlined `data-*` inputs (D-013) but still calls the same `cityViewModel` →
+`computeDeviation` path, so the invariant survives the registry growth.
 
 ## R-002 — Astronomy accuracy · accepted
 
@@ -58,3 +60,11 @@ The docs infra got swept into the slice #4 squash — harmless this time, but
 uncontrolled. **Action:** each worker session must run in its own `git worktree` (see
 the `/worktree` skill), branched from `main`. Coordinator work also uses a separate
 worktree. Never two sessions on one working tree.
+
+## R-009 — GeoNames attribution not yet shown · open
+
+Slice #5 ships a dataset derived from GeoNames `cities15000`, licensed **CC-BY 4.0** —
+the site must visibly credit GeoNames. No footer exists yet, so the attribution is
+currently absent from the rendered pages (noted only in `cities.ts`/`buildCities.ts`
+source headers). **Action:** add the GeoNames credit when the footer lands (slice #11);
+must be in place before the repo goes public / release (R-007).

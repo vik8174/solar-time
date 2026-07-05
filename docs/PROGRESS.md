@@ -6,6 +6,33 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Slice #5 — City dataset + build script
+
+- **Date:** 2026-07-05
+- **PR:** #31 (merged) · **Issue:** #5 (closed)
+- **What:** Replaced the hardcoded single-city registry with a generated ~1000-city dataset
+  wired into SSG. `scripts/buildCities.ts` (I/O boundary) fetches + unzips the GeoNames
+  `cities15000` dump (cached under git-ignored `scripts/.cache/`) and delegates every
+  reproducible decision to pure modules `scripts/geonames.ts` (parse + select) and
+  `scripts/citySlug.ts` (collision-free slugs). Output `src/data/cities.json` is committed
+  (1085 cities, 355 IANA zones) so `astro build` needs no network. `getStaticPaths` now
+  renders 1086 pages. `resolveDefaultCity(browserTimeZone)` (in `src/lib/`) maps a browser
+  IANA zone → city (exact → same-region → fallback, never undefined).
+- **Selection (deterministic):** population-desc pass (geonameId tie-break) + a
+  zone-completeness pass guaranteeing every source IANA zone has ≥1 city, so
+  `resolveDefaultCity` can always resolve an exact zone. No `Date`/random; byte-stable JSON.
+- **Bundle isolation (ADR D-013):** city pages inline their own city's data into `data-*`
+  attributes at build time; the island no longer imports the full registry. Verified: single
+  island bundle 4.7 KB, no city names in `dist/**/*.js`. `cityViewModel`/`computeDeviation`
+  stay the SSOT (R-001 held — thin client preserved as the dataset grew).
+- **Contract:** `City` extended additively (`altNames`, `population`); `getCity` unchanged.
+- **Coverage:** `resolveDefaultCity` placed in `src/lib` so it falls under the D-012 gate;
+  100% stmts/funcs/lines, branch 85% (one unreachable `noUncheckedIndexedAccess` guard).
+- **Review:** code-reviewer → PASS WITH NOTES (0 issues ≥75). Coordinator caught + fixed
+  pre-merge: ADR ref D-012→D-013, and moved `resolveDefaultCity` src/data→src/lib.
+- **Attribution debt:** GeoNames `cities15000` is CC-BY 4.0 — footer attribution required,
+  deferred to footer slice #11 (noted in `cities.ts`/`buildCities.ts` headers, see R-009).
+
 ## Chore — Minimum unit-test coverage gate
 
 - **Date:** 2026-07-05
