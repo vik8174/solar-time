@@ -67,4 +67,15 @@ Tally feedback form. English-only for MVP. App Check NOT needed for MVP (no back
 
 Each ticket runs in its own fresh agent session (worker); a coordinator session holds
 state and passes work via handoffs. Handoffs are throwaway (`../handoffs/`, git-ignored);
-durable history lives in these committed docs.
+durable history lives in these committed docs. **Each session works in its own
+`git worktree` off `main`** — never two sessions on one working tree (see R-008).
+
+## D-010 — TypeScript `strictest` preset · accepted
+
+`tsconfig.json` extends `astro/tsconfigs/strictest` (not `strict`). Turns on the full
+strict set, notably `noUncheckedIndexedAccess` (indexed access is `T | undefined`) and
+`exactOptionalPropertyTypes`. **Why:** catch silent index/optional bugs at compile time,
+especially before the city dataset (slice #5) which is index-access heavy. **Cost:** array
+and object-index access must be guarded/narrowed, not assumed. Impact when adopted was
+small (12 type-only fixes, PR #20 / issue #19). ESLint gets the symmetric `strictTypeChecked`
+move in issue #21 (future D-011).
