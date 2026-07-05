@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { City } from './cities';
+import type { City } from '../data/cities';
 import { resolveDefaultCity } from './resolveDefaultCity';
 
 const city = (over: Partial<City> = {}): City => ({

@@ -76,7 +76,7 @@ const vm = buildCityViewModel({ name: city.name, coords: city.coords }, deviatio
        *
        * The city's data is inlined into `data-*` attributes at build time, so
        * this island never imports the ~1000-city registry (bundle stays tiny —
-       * ADR D-012). Only the domain + view-model modules (the SSOT) are pulled.
+       * ADR D-013). Only the domain + view-model modules (the SSOT) are pulled.
        */
       const root = document.querySelector<HTMLElement>('[data-city-slug]');
       const longitude = Number(root?.dataset.cityLongitude);

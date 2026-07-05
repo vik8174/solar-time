@@ -12,7 +12,7 @@
  *  3. A stable global fallback so the caller never gets undefined.
  */
 
-import type { City } from './cities';
+import type { City } from '../data/cities';
 
 /** Population desc, then slug asc — deterministic pick among candidates. */
 const preferLarger = (a: City, b: City): number =>
