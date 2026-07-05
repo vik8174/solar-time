@@ -41,7 +41,14 @@ const vm = buildCityViewModel({ name: city.name, coords: city.coords }, deviatio
     <title>Solar time in {vm.cityName}</title>
   </head>
   <body>
-    <main class="page" data-city-slug={city.slug}>
+    <main
+      class="page"
+      data-city-slug={city.slug}
+      data-city-name={city.name}
+      data-city-coords={city.coords}
+      data-city-longitude={city.longitude}
+      data-city-timezone={city.timeZone}
+    >
       <div class="content">
         <p class="eyebrow">{vm.cityName} · {vm.coords}</p>
 
@@ -59,7 +66,6 @@ const vm = buildCityViewModel({ name: city.name, coords: city.coords }, deviatio
     </main>
 
     <script>
-      import { getCity } from '../data/cities';
       import { computeDeviation } from '../domain/solarTime';
       import { buildCityViewModel } from '../lib/cityViewModel';
       import { scaleInnerSvg } from '../lib/scaleSvg';
@@ -67,17 +73,26 @@ const vm = buildCityViewModel({ name: city.name, coords: city.coords }, deviatio
       /**
        * Recompute for today so a page built days ago never shows a stale number.
        * Same domain + view model as the build → identical output, no reflow.
+       *
+       * The city's data is inlined into `data-*` attributes at build time, so
+       * this island never imports the ~1000-city registry (bundle stays tiny —
+       * ADR D-012). Only the domain + view-model modules (the SSOT) are pulled.
        */
       const root = document.querySelector<HTMLElement>('[data-city-slug]');
-      const city = root && getCity(root.dataset.citySlug ?? '');
-      if (city) {
+      const longitude = Number(root?.dataset.cityLongitude);
+      const timeZone = root?.dataset.cityTimezone;
+      const name = root?.dataset.cityName;
+      const coords = root?.dataset.cityCoords;
+      if (
+        root &&
+        timeZone &&
+        name !== undefined &&
+        coords !== undefined &&
+        !Number.isNaN(longitude)
+      ) {
         const vm = buildCityViewModel(
-          { name: city.name, coords: city.coords },
-          computeDeviation({
-            longitude: city.longitude,
-            timeZone: city.timeZone,
-            date: new Date(),
-          }),
+          { name, coords },
+          computeDeviation({ longitude, timeZone, date: new Date() }),
         );
 
         const setText = (selector: string, text: string): void => {
