@@ -123,3 +123,17 @@ island stays a thin caller of `cityViewModel` → `computeDeviation` (the SSOT);
 changes only _where the inputs come from_, not the compute path. **Assumption:** any new
 per-page client logic must read from `data-*` / props, not re-import the registry, or the
 bundle win regresses. Adopted with slice #5 (PR #31 / issue #5).
+
+## D-014 — `firebase-tools` as an exact devDependency (not global CLI) · accepted
+
+Deploy scripts (`deploy:stage` / `deploy:prod`, D-002 aliases) call `firebase` via a
+**pinned devDependency** (`firebase-tools@15.22.4`, save-exact) rather than a globally
+installed CLI. **Why:** self-contained + reproducible — `npm install` is the only setup
+step, npm resolves `firebase` from `node_modules/.bin`, and the version is locked so a
+deploy can't silently pick up a breaking CLI release. Only `firebase login` (on
+**vik8174@gmail.com**, D-002 / R-005) remains a manual prerequisite. **Trade-off:** heavy
+dep — pulls ~597 transitive packages and carries some moderate advisories in its
+transitive tree; acceptable because it's dev-only and never ships to the static bundle.
+**Alternative considered:** global `firebase` + a README prerequisite (lighter tree, but
+unpinned and non-reproducible across machines). Adopted with the deploy-scripts chore
+(PR #33 / issue #27).
