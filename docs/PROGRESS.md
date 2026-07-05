@@ -6,6 +6,27 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Chore — Minimum unit-test coverage gate
+
+- **Date:** 2026-07-05
+- **PR:** #29 (merged) · **Issue:** #26 (closed)
+- **What:** Coverage floor enforced on both sides from one SSOT. `vitest.config.ts` scopes
+  `coverage.include` to the logic dirs (`src/lib`, `src/domain`) and adds
+  `thresholds: { statements: 90, lines: 90, functions: 90, branches: 80 }`; under threshold
+  `vitest run --coverage` exits non-zero. See ADR D-012.
+- **Both sides, same command:** CI's Test step runs `npm run test:coverage` (was `npm test`);
+  a committed `.githooks/pre-push` runs typecheck → lint → format:check → test:coverage
+  (build stays CI-only), wired for every clone via a `prepare` script
+  (`test -z "$CI" && git config core.hooksPath .githooks || true` — local-only, no CI churn).
+- **Scope rationale:** `src/data` excluded (generated tables, rewritten by slice #5, no
+  hand-written logic); components/pages are `.astro`, the one inline script only re-invokes
+  already-covered lib/domain functions.
+- **Coverage after:** 100% statements/branches/functions/lines on the scoped dirs (passes
+  90/80 with headroom).
+- **Review:** code-reviewer → PASS WITH NOTES; both notes ($CI-gated `prepare`, labeled
+  pre-push stages) applied before merge.
+- **Docs:** `.claude/rules/dev-flow.md` added — cheap-first local order the hook enforces.
+
 ## Chore — ESLint `strictTypeChecked` + type-aware linting
 
 - **Date:** 2026-07-05

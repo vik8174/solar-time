@@ -95,3 +95,17 @@ necessary there). **Why config change over edits:** the codebase was already cle
 `tseslint.config()` helper to ESLint's `defineConfig()`; added `@types/node` (exact 26.1.0)
 so `import.meta.dirname` type-checks under `astro check`. Impact when adopted: 29 lint
 errors, all in 2 rules, all resolved (PR #24 / issue #21).
+
+## D-012 — Minimum unit-test coverage gate · accepted
+
+Coverage floor enforced from one SSOT in `vitest.config.ts`:
+`thresholds: { statements: 90, lines: 90, functions: 90, branches: 80 }`, with
+`coverage.include` scoped to `src/lib` + `src/domain`. Both sides run the same
+`npm run test:coverage`: CI (the hard backstop) and a committed `.githooks/pre-push` hook
+(fail-fast locally, wired via a `prepare` script; bypassable with `--no-verify` — accepted,
+CI is the real gate). **Why a floor, not a driver:** TDD already yields ~100%; this is a
+ratchet so untested logic can't slip in as AFK slices land. **Why scoped:** `src/data` holds
+generated tables (rewritten by slice #5) with no hand-written logic; components/pages are
+`.astro`. **Assumption:** the gate stays meaningful only while logic lives in `src/lib` /
+`src/domain` — a future logic dir must be added to `coverage.include` or it escapes the gate.
+Impact when adopted: config + hook + docs only, no source changes (PR #29 / issue #26).
