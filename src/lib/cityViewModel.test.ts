@@ -60,11 +60,11 @@ describe('buildCityViewModel', () => {
 
   it('breaks the total into three signed components plus a total', () => {
     const vm = buildCityViewModel(PRAGUE, summer);
-    const byKey = Object.fromEntries(vm.breakdown.map((r) => [r.key, r]));
-    expect(byKey.longitude.value).toBe('+2');
-    expect(byKey.equationOfTime.value).toBe('+4');
-    expect(byKey.dst.value).toBe('+60');
-    expect(byKey.total.value).toBe('+66');
+    const byKey = new Map(vm.breakdown.map((r) => [r.key, r] as const));
+    expect(byKey.get('longitude')?.value).toBe('+2');
+    expect(byKey.get('equationOfTime')?.value).toBe('+4');
+    expect(byKey.get('dst')?.value).toBe('+60');
+    expect(byKey.get('total')?.value).toBe('+66');
   });
 
   it('marks a zero component so the UI can dim it, but still lists it', () => {
