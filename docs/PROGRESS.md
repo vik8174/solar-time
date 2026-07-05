@@ -6,6 +6,26 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Chore — Deploy scripts (stage/prod) + README refresh
+
+- **Date:** 2026-07-05
+- **PR:** #33 (merged) · **Issue:** #27 (closed)
+- **What:** Added the missing manual deploy scripts and rewrote the placeholder README.
+  `package.json` gains `deploy:stage` / `deploy:prod` — each `npm run build && firebase
+deploy --only hosting -P <alias>` (aliases from `.firebaserc`: `stage` →
+  `solar-time-stage`, `prod` → `solar-time-prod`). README rewritten per
+  `~/.claude/rules/readme-structure.md`: description, Quick Start, Tech Stack,
+  Prerequisites, Scripts table, Project Structure (reflects slice #5 `scripts/` +
+  `src/data`), Deployment (aliases + noindex/pre-release note), `docs/` link. GeoNames
+  credited as CC-BY (R-009); visible in-page credit still deferred to footer slice #11.
+- **firebase-tools as devDep (ADR D-014):** pinned exact `15.22.4` so scripts are
+  self-contained (`npm install` is enough; npm resolves `firebase` from
+  `node_modules/.bin`). Trade-off recorded in D-014.
+- **Scope:** config + docs + one devDep — no source/behavior changes. Single `build`
+  (no `build:stage/prod`, YAGNI); CI auto-deploy on merge left OUT (future ticket).
+- **Verify:** typecheck / lint / format:check / test:coverage (68 pass) / build (1086
+  pages) all green; `deploy:prod` deliberately not run. code-reviewer → PASS (0 issues ≥75).
+
 ## Slice #5 — City dataset + build script
 
 - **Date:** 2026-07-05
