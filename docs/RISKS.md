@@ -10,7 +10,9 @@ than deleting — the trail matters.
 `/[city]` bakes deviation at build date; browser recomputes for today. If the inline
 script and the build-time path ever diverge, users see a flicker or a wrong number.
 **Mitigation:** both use the exact same `computeDeviation` (SSOT, D-003/D-004).
-Watch during slice #4 — keep the inline script a thin caller, no re-implementation.
+**Implemented in slice #4 (PR #17):** build and client both call `cityViewModel` →
+`computeDeviation`; the inline script is a thin caller with no re-implementation. Keep
+this invariant when the dataset grows in slice #5.
 
 ## R-002 — Astronomy accuracy · accepted
 
@@ -46,3 +48,13 @@ also flip repo public and add analytics keys then.
 
 Portfolio value needs a public repo. Kept private until release-ready. Flip to public
 at release (couples with R-003 branch protection and R-006 domain).
+
+## R-008 — Multiple agent sessions share one working copy · open
+
+Slice #4 worker ran in the same clone (`~/Projects/solar-time`) as the coordinator. It
+branched `feat/city-page` off an in-flight docs branch instead of `main`, and a
+coordinator commit landed on the worker's branch because `HEAD` was switched underneath.
+The docs infra got swept into the slice #4 squash — harmless this time, but
+uncontrolled. **Action:** each worker session must run in its own `git worktree` (see
+the `/worktree` skill), branched from `main`. Coordinator work also uses a separate
+worktree. Never two sessions on one working tree.

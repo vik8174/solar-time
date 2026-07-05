@@ -6,6 +6,24 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Slice #4 — City page `/[city]` end-to-end (Prague)
+
+- **Date:** 2026-07-04
+- **PR:** #17 (merged) · **Issue:** #4 (closed)
+- **What:** First real screen. Static per-city page via SSG (`getStaticPaths`) on a
+  hardcoded Prague entry (full dataset is slice #5).
+- **SSOT recompute:** `[city].astro` computes the deviation at build time **and** ships a
+  tiny inline `<script>` that recomputes for **today** — both call the same
+  `cityViewModel` / `computeDeviation`, so a page built days ago never shows a stale
+  number (implements D-003, mitigates R-001).
+- **New modules:** `src/lib/cityViewModel.ts` (pure SSOT for display strings + scale
+  geometry), `format.ts`, `scaleWindow.ts`, `scaleGeometry.ts`, `scaleSvg.ts` — all with
+  tests. Data: `src/data/cities.ts` (Prague only for now).
+- **UI:** `HeroNumber`, `SolarScale`, `Breakdown` Astro components; visual tokens realized
+  in `src/styles/tokens.css` (D-006).
+- **Note:** landed on `main` via squash together with the docs/handoffs infra (the
+  worker branch was cut from that branch — see the shared-working-copy incident, R-008).
+
 ## Slice #3 — Domain `computeDeviation`
 
 - **Date:** 2026-07-04
