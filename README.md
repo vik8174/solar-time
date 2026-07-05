@@ -1,43 +1,104 @@
-# Astro Starter Kit: Minimal
+# Solar Time
+
+How far your clock drifts from the sun. A small Astro web tool that shows, for a
+given city, how much the official wall-clock time deviates from true (apparent)
+solar time — driven by longitude offset within the time zone, the equation of
+time, and DST.
+
+> ⚠️ Pre-release: the site ships with `noindex` until it's production-ready.
+
+## Quick Start
 
 ```sh
-npm create astro@latest -- --template minimal
+git clone https://github.com/vik8174/solar-time.git
+cd solar-time
+npm install
+npm run dev        # local dev server at localhost:4321
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Tech Stack
 
-## 🚀 Project Structure
+- **Astro 7** — static site generation (SSG)
+- **TypeScript** (strict) — pure, DOM-free domain logic
+- **Vitest** — unit tests with a coverage gate
+- **ESLint** (`strictTypeChecked`) + **Prettier**
+- **Firebase Hosting** — stage & prod
 
-Inside of your Astro project, you'll see the following folders and files:
+## Prerequisites
+
+- **Node.js >= 22.12.0** (see `engines` in `package.json`)
+- For deploys: **Firebase CLI authenticated on `vik8174@gmail.com`** (the personal
+  account, not a work account). `firebase-tools` is bundled as a devDependency, so
+  the deploy scripts use the local `firebase` binary — no global install needed.
+  You only need to log in once: `npx firebase login`.
+
+## Scripts
+
+All commands run from the project root:
+
+| Command                 | Action                                                  |
+| :---------------------- | :------------------------------------------------------ |
+| `npm run dev`           | Start local dev server at `localhost:4321`              |
+| `npm run build`         | Build the production site to `./dist/`                  |
+| `npm run preview`       | Preview the build locally before deploying              |
+| `npm run build:cities`  | Regenerate the city dataset from GeoNames (see below)   |
+| `npm run typecheck`     | Type-check with `astro check`                           |
+| `npm run lint`          | Lint with ESLint                                        |
+| `npm run format`        | Format all files with Prettier                          |
+| `npm run format:check`  | Verify formatting without writing                       |
+| `npm test`              | Run unit tests once (Vitest)                            |
+| `npm run test:watch`    | Run tests in watch mode                                 |
+| `npm run test:coverage` | Run tests with coverage (enforces the coverage gate)    |
+| `npm run deploy:stage`  | Build and deploy hosting to the **stage** project       |
+| `npm run deploy:prod`   | Build and deploy hosting to the **prod** (live) project |
+| `npm run astro ...`     | Run Astro CLI commands (`astro add`, `astro check`, …)  |
+
+## Project Structure
 
 ```text
-/
-├── public/
+solar-time/
+├── public/            # Static assets served as-is
+├── scripts/           # Build-time tooling (GeoNames city dataset generator)
 ├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+│   ├── domain/        # Pure astronomy logic (solar-time deviation, SSOT)
+│   ├── lib/           # View models, formatting, scale geometry helpers
+│   ├── components/    # Astro UI components
+│   ├── data/          # Generated ~1000-city dataset (cities.json + loader)
+│   ├── pages/         # Routes (index + [city] dynamic route)
+│   └── styles/        # Design tokens
+├── docs/              # Durable project history (see below)
+└── handoffs/          # Disposable coordinator → worker handoffs (git-ignored)
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+### Regenerating the city dataset
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+The city list in `src/data` is generated from the [GeoNames](https://www.geonames.org/)
+dataset (CC-BY 4.0) by `scripts/buildCities.ts`:
 
-Any static assets, like images, can be placed in the `public/` directory.
+```sh
+npm run build:cities
+```
 
-## 🧞 Commands
+## Deployment
 
-All commands are run from the root of the project, from a terminal:
+Deploys go to Firebase Hosting. Project aliases are defined in `.firebaserc`:
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+| Alias   | Firebase project   | Command                |
+| :------ | :----------------- | :--------------------- |
+| `stage` | `solar-time-stage` | `npm run deploy:stage` |
+| `prod`  | `solar-time-prod`  | `npm run deploy:prod`  |
 
-## 👀 Want to learn more?
+Both scripts run `npm run build` first, then `firebase deploy --only hosting -P <alias>`.
+The build is identical across environments today; environment-specific differences
+(e.g. `noindex`, analytics) will arrive in later slices.
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+> `deploy:prod` hits the **live production** project. It's a deliberate manual
+> action — there is no CI auto-deploy on merge.
+
+## Documentation
+
+Durable project history and rationale live in [`docs/`](docs/):
+
+- [`docs/PROGRESS.md`](docs/PROGRESS.md) — what shipped per slice
+- [`docs/DECISIONS.md`](docs/DECISIONS.md) — key decisions + assumptions (ADR-lite)
+- [`docs/RISKS.md`](docs/RISKS.md) — known risks and things to watch
