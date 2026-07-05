@@ -1,0 +1,42 @@
+# Dev Flow
+
+Local checks run **cheapest-first**, so a fast failure (a type error, a lint
+nit) stops you before you spend time on the slower stages. Run them in this
+order before opening a PR:
+
+| #   | Stage       | Command                 | Notes                                |
+| --- | ----------- | ----------------------- | ------------------------------------ |
+| 1   | Typecheck   | `npm run typecheck`     | `astro check`                        |
+| 2   | Lint        | `npm run lint`          | ESLint                               |
+| 3   | Prettier    | `npm run format:check`  | `npm run format` to auto-fix         |
+| 4   | Tests + cov | `npm run test:coverage` | Enforces coverage thresholds (below) |
+| 5   | QA          | `qa` agent              | Audit coverage gaps, edge cases      |
+| 6   | Code review | `code-reviewer` agent   | Before the PR                        |
+| 7   | PR          | `gh pr create`          | Coordinator gates the merge (HITL)   |
+
+## Enforced automatically
+
+Stages 1–4 are wired into a committed **`pre-push` git hook**
+([`.githooks/pre-push`](../../.githooks/pre-push)) so a broken push is rejected
+locally before it ever reaches CI:
+
+```sh
+npm run typecheck && npm run lint && npm run format:check && npm run test:coverage
+```
+
+The hook is activated by the `prepare` npm script
+(`git config core.hooksPath .githooks`), which runs on `npm install`/`npm ci`.
+No extra dependency is added.
+
+## Coverage thresholds
+
+`npm run test:coverage` scopes coverage to the logic dirs (`src/lib`,
+`src/domain`) and fails under: **statements 90 / lines 90 / functions 90 /
+branches 80**. `src/data` is excluded — it holds generated tables with no
+hand-written logic. See [`vitest.config.ts`](../../vitest.config.ts).
+
+## Build
+
+`npm run build` is **CI-only** — it is not part of the local `pre-push` hook,
+to keep the local loop fast. CI runs it (and the same 1–4 checks) on every push
+and PR.

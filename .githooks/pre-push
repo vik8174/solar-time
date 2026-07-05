@@ -1,0 +1,5 @@
+#!/bin/sh
+echo '[pre-push] typecheck' && npm run typecheck && \
+echo '[pre-push] lint' && npm run lint && \
+echo '[pre-push] format:check' && npm run format:check && \
+echo '[pre-push] test:coverage' && npm run test:coverage
