@@ -43,6 +43,7 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
   canonicalPath="/"
   ogImagePath="/og/home.png"
   noindex
+  support
 >
   <main class="page" data-home-longitude={neutral.longitude} data-home-timezone={neutral.timeZone}>
     <div class="content">
@@ -65,7 +66,10 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
       <div class="geo">
         <button type="button" class="geo-button" data-geo-button>📍 Use my location</button>
         <p class="geo-hint" data-geo-hint hidden></p>
-        <p class="geo-note">Calculated in your browser — your location never leaves it.</p>
+        <p class="geo-note">
+          Calculated in your browser — your location never leaves it.
+          <a href="/privacy">Privacy</a>
+        </p>
       </div>
     </div>
   </main>
@@ -300,6 +304,13 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
       font-size: 11px;
       color: var(--muted-dim);
       margin: 12px auto 0;
+    }
+    .geo-note a {
+      color: inherit;
+      text-decoration: underline;
+    }
+    .geo-note a:hover {
+      color: var(--muted);
     }
   </style>
 </Base>

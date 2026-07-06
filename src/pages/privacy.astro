@@ -1,0 +1,127 @@
+---
+/**
+ * Privacy (`/privacy`) — a short, plain-language account of what the site does
+ * and doesn't collect (story 27).
+ *
+ * Describes the *policy* set by D-008: cookieless analytics, error-only
+ * monitoring with coordinates scrubbed, and geolocation used in the browser
+ * only (never stored or sent). No cookies, no banner. Indexable on prod,
+ * noindex on stage — same gate as the city pages (D-020).
+ */
+import { IS_PROD } from '../config/site';
+import Base from '../layouts/Base.astro';
+---
+
+<Base
+  title="Privacy — Solar Time"
+  description="What Solar Time collects and what it doesn't: no cookies, cookieless analytics, and geolocation that stays in your browser."
+  canonicalPath="/privacy"
+  noindex={!IS_PROD}
+>
+  <main class="page">
+    <article class="content">
+      <h1>Privacy</h1>
+      <p class="lead">
+        Solar Time is a static tool with no accounts and no backend. Here's exactly what happens to
+        your data — in plain language.
+      </p>
+
+      <section>
+        <h2>Your location stays in your browser</h2>
+        <p>
+          When you tap <strong>“📍 Use my location”</strong>, your coordinates are read by your
+          browser and used <strong>on your device</strong> to compute the solar-time number. They are
+          <strong>never stored and never sent anywhere</strong>. Refresh the page and they're gone.
+        </p>
+      </section>
+
+      <section>
+        <h2>No cookies, no banner</h2>
+        <p>
+          The site sets <strong>no cookies</strong> and shows no consent banner, because there is nothing
+          to consent to — no tracking cookies, no ad networks, no cross-site identifiers.
+        </p>
+      </section>
+
+      <section>
+        <h2>Anonymous analytics</h2>
+        <p>
+          To understand roughly how the tool is used, it records a few
+          <strong>anonymous, cookieless</strong> events — a page view, a city selection, whether geolocation
+          was used. These carry <strong>no personal data</strong> and no precise location, and they aren't
+          tied to an identity.
+        </p>
+      </section>
+
+      <section>
+        <h2>Error monitoring without your coordinates</h2>
+        <p>
+          If something breaks, an error report helps get it fixed. These reports are
+          <strong>error-only</strong> and are scrubbed so that any <strong
+            >GPS coordinates are removed</strong
+          > before they're ever sent.
+        </p>
+      </section>
+
+      <section>
+        <h2>City data</h2>
+        <p>
+          City locations come from <a
+            href="https://www.geonames.org"
+            target="_blank"
+            rel="noopener noreferrer">GeoNames</a
+          >, used under the CC BY 4.0 licence.
+        </p>
+      </section>
+    </article>
+  </main>
+</Base>
+
+<style>
+  .page {
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  .content {
+    width: 100%;
+    max-width: 560px;
+  }
+  h1 {
+    font-family: var(--mono);
+    font-size: 28px;
+    margin: 0 0 16px;
+  }
+  .lead {
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.6;
+    margin: 0 0 8px;
+  }
+  h2 {
+    font-family: var(--mono);
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    margin: 32px 0 8px;
+  }
+  p {
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--text);
+    margin: 0;
+  }
+  section p {
+    color: var(--muted);
+  }
+  a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+  strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+</style>
