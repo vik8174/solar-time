@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildCityIndex, searchCities, type SearchCity } from './citySearch';
+import { buildCityIndex, normalizeText, searchCities, type SearchCity } from './citySearch';
 
 const city = (name: string, slug = name.toLowerCase(), altNames: string[] = []): SearchCity => ({
   slug,
@@ -18,6 +18,39 @@ const cities: readonly SearchCity[] = [
 
 const slugsFor = (query: string): string[] =>
   searchCities(buildCityIndex(cities), query).map((c) => c.slug);
+
+describe('normalizeText', () => {
+  it('converts to lowercase', () => {
+    expect(normalizeText('PRAGUE')).toBe('prague');
+    expect(normalizeText('Prague')).toBe('prague');
+  });
+
+  it('strips diacritics', () => {
+    expect(normalizeText('München')).toBe('munchen');
+    expect(normalizeText('Zürich')).toBe('zurich');
+    expect(normalizeText('São Paulo')).toBe('sao paulo');
+  });
+
+  it('trims leading and trailing whitespace', () => {
+    expect(normalizeText('  Prague  ')).toBe('prague');
+    expect(normalizeText('\tMadrid\n')).toBe('madrid');
+  });
+
+  it('handles mixed case and diacritics', () => {
+    expect(normalizeText('  MÜNCHEN  ')).toBe('munchen');
+    expect(normalizeText('SÃO PAULO')).toBe('sao paulo');
+  });
+
+  it('returns empty string for whitespace-only input', () => {
+    expect(normalizeText('   ')).toBe('');
+    expect(normalizeText('\t\n')).toBe('');
+  });
+
+  it('preserves spaces within words', () => {
+    expect(normalizeText('New York')).toBe('new york');
+    expect(normalizeText('San Francisco')).toBe('san francisco');
+  });
+});
 
 describe('searchCities', () => {
   it('finds a city by an exact name match', () => {
@@ -66,5 +99,84 @@ describe('searchCities', () => {
     );
     const results = searchCities(buildCityIndex(many), 'Springfield', 5);
     expect(results).toHaveLength(5);
+  });
+
+  it('normalizes multiple diacritics correctly', () => {
+    const zurich = city('Zürich', 'zurich', ['Zürich', 'Zurich']);
+    // Query with umlaut, diacritic in alt names, all should match
+    expect(searchCities(buildCityIndex([zurich]), 'Zürich')).toContain(zurich);
+    expect(searchCities(buildCityIndex([zurich]), 'Zurich')).toContain(zurich);
+    expect(searchCities(buildCityIndex([zurich]), 'zurich')).toContain(zurich);
+  });
+
+  it('handles complex diacritics (cedilla, ring, tilde)', () => {
+    const cities_special: SearchCity[] = [
+      city('São Paulo', 'sao-paulo'),
+      city('Søtokken', 'sotokken'),
+      city('Niño', 'nino'),
+    ];
+    const index = buildCityIndex(cities_special);
+    // All should normalize and match without diacritics
+    expect(searchCities(index, 'Sao Paulo')).toContain(cities_special[0]);
+    expect(searchCities(index, 'Sotokken')).toContain(cities_special[1]);
+    expect(searchCities(index, 'Nino')).toContain(cities_special[2]);
+  });
+
+  it('preserves ranking when multiple results have fuzzy matches', () => {
+    const cities_dup: SearchCity[] = [
+      city('New York', 'new-york'),
+      city('New Delhi', 'new-delhi'),
+      city('Newcastle', 'newcastle'),
+    ];
+    const index = buildCityIndex(cities_dup);
+    const results = searchCities(index, 'new');
+    // All three match 'new' but Fuse ranks by relevance; verify all are returned
+    expect(results).toHaveLength(3);
+    expect(results.map((c) => c.slug)).toEqual(
+      expect.arrayContaining(['new-york', 'new-delhi', 'newcastle']),
+    );
+  });
+
+  it('tolerates leading and trailing whitespace in queries', () => {
+    const index = buildCityIndex(cities);
+    // Internal normalization trims whitespace
+    expect(searchCities(index, '  Prague  ')).toContain(cities[0]);
+    expect(searchCities(index, '\tMadrid\t')).toContain(cities[3]);
+  });
+
+  it('returns results in a consistent order across repeated searches', () => {
+    const index = buildCityIndex(cities);
+    const results1 = searchCities(index, 'a');
+    const results2 = searchCities(index, 'a');
+    expect(results1.map((c) => c.slug)).toEqual(results2.map((c) => c.slug));
+  });
+
+  it('does not match when typo tolerance is exceeded', () => {
+    const index = buildCityIndex(cities);
+    // Too many typos / too different
+    expect(searchCities(index, 'xxxxxx')).toEqual([]);
+    expect(searchCities(index, 'pppppragueee')).toEqual([]);
+  });
+
+  it('handles single-character queries', () => {
+    const index = buildCityIndex(cities);
+    const results = searchCities(index, 'M');
+    // Should match Madrid and Munich
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.some((c) => c.slug === 'madrid')).toBe(true);
+  });
+
+  it('respects custom limit of 1', () => {
+    const index = buildCityIndex(cities);
+    const results = searchCities(index, 'a', 1);
+    expect(results).toHaveLength(1);
+  });
+
+  it('handles a limit larger than available results', () => {
+    const index = buildCityIndex(cities);
+    const results = searchCities(index, 'Prague', 100);
+    // Only Prague matches 'Prague' exactly (others have no match)
+    expect(results).toHaveLength(1);
+    expect(results[0]!.slug).toBe('prague');
   });
 });

@@ -87,4 +87,79 @@ describe('CitySearch', () => {
     await user.click(screen.getByRole('button', { name: /use my location/i }));
     expect(onUseLocation).toHaveBeenCalledTimes(1);
   });
+
+  it('does not navigate above the first option with ArrowUp at position 0', async () => {
+    const user = userEvent.setup();
+    const { onSelect } = renderSearch();
+
+    const input = screen.getByRole('combobox');
+    await user.type(input, 'a');
+    await screen.findByRole('listbox');
+    // Press ArrowUp multiple times — activeIndex should stay at 0
+    await user.keyboard('{ArrowUp}{ArrowUp}{ArrowUp}');
+    await user.keyboard('{Enter}');
+
+    // Should select the first option, not go out of bounds
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    const firstCity = CITIES[0]!;
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ slug: firstCity.slug }));
+  });
+
+  it('closes the listbox when Escape is pressed with an empty query', async () => {
+    const user = userEvent.setup();
+    renderSearch();
+
+    const input = screen.getByRole('combobox');
+    await user.type(input, 'Prague');
+    await screen.findByRole('listbox');
+
+    // Clear the query first
+    await user.clear(input);
+    // Then press Escape — should close without opening again
+    await user.keyboard('{Escape}');
+
+    expect(screen.queryByRole('listbox')).toBeNull();
+  });
+
+  it('clears the query when Escape is pressed with a non-empty query', async () => {
+    const user = userEvent.setup();
+    renderSearch();
+
+    const input = screen.getByRole<HTMLInputElement>('combobox');
+    await user.type(input, 'Prague');
+    await screen.findByRole('listbox');
+
+    // Escape should clear the query but keep focus
+    await user.keyboard('{Escape}');
+
+    expect(input.value).toBe('');
+  });
+
+  it('shows alt names as hints in the option label', async () => {
+    const user = userEvent.setup();
+    renderSearch();
+
+    const input = screen.getByRole('combobox');
+    await user.type(input, 'Prague');
+
+    const option = await screen.findByRole('option', { name: /Prague/ });
+    // Prague has an alt name 'Praha'
+    expect(option.textContent).toContain('Praha');
+  });
+
+  it('handles consecutive ArrowDown presses', async () => {
+    const user = userEvent.setup();
+    const { onSelect } = renderSearch();
+
+    const input = screen.getByRole('combobox');
+    await user.type(input, 'a'); // Matches Madrid and Munich
+    await screen.findByRole('listbox');
+
+    // Navigate down twice
+    await user.keyboard('{ArrowDown}');
+    await user.keyboard('{ArrowDown}');
+    await user.keyboard('{Enter}');
+
+    expect(onSelect).toHaveBeenCalledTimes(1);
+  });
 });
