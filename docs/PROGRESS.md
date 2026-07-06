@@ -6,6 +6,25 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Perf #44 — React → Preact for the search island
+
+- **Date:** 2026-07-06
+- **PR:** #56 (merged) · **Issue:** #44 (closed)
+- **What:** Swapped the sole client island (`CitySearch`) from React to **Preact** — a full
+  migration to `preact/hooks` (not the `compat` shim), toward D-001's "near-zero JS" ideal.
+  Resolves QA finding #3 from slice #6. See **ADR D-021**.
+- **Payload (per-page island, network-confirmed):** **raw −79.5%** (221 → 45 KB), **gzip −74.9%**
+  (71 → 18 KB) — the ~184 KB React runtime is gone. Fuse.js + the pure `citySearch.ts` logic are
+  framework-agnostic and were untouched.
+- **React↔Preact traps handled:** `onChange` → `onInput` (Preact fires change per-keystroke) and
+  `onBlur` → `onFocusOut` — **Preact's `onBlur` does not bubble**, a real regression caught by
+  `code-reviewer` and now pinned by a regression test (see R-012). Removed a now-needless
+  `as never` in `renderOgCard.ts` (fallout of dropping `@types/react`; OG logic unchanged).
+- **Verify:** typecheck / lint / format / test:coverage (**228 tests**) + full prod build (1086
+  pages, OG + sitemap) green; PR CI all green. `#43` a11y intact.
+- **Deps:** `@astrojs/react` + `react` + `react-dom` → `@astrojs/preact` + `preact`;
+  `@testing-library/react` → `@testing-library/preact`; `@types/react*` dropped (exact versions).
+
 ## Slice #9 — SEO + OG share cards
 
 - **Date:** 2026-07-06
