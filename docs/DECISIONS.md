@@ -168,3 +168,22 @@ so it carries only search fields. **Invariant:** the per-page deviation island s
 attributes must be weighed against payload size before being added to the index shape. Fuzzy
 logic (`src/lib/citySearch.ts`) is pure and under the D-012 gate; diacritic/case-insensitive
 via NFD normalization; typo tolerance from Fuse. Adopted with slice #6 (PR #40 / issue #6).
+
+## D-017 — Lean, lazily-fetched nearest-city geo-index · accepted
+
+Slice #7's "Your location / **near {city}**" label needs each city's **coordinates**, but the
+search index (D-016) deliberately dropped coords, and the per-page island (D-013) never sees the
+registry. Rather than widen either, ship a **separate lean geo-index**: `toGeoIndex`
+(`src/lib/geoIndex.ts`) projects the registry to `{ slug, name, lat, lon }` only, served as a
+prerendered static endpoint **`/geo-index.json`**, fetched **lazily and only for the geo flow**
+(the 📍 path), then consumed by the pure `findNearestCity(lat, lon)` (haversine, under the D-012
+gate). **Latitude source:** the registry stores no numeric latitude, so it's parsed from the
+city's `coords` display string; both coords **rounded to 2 decimals** (~1 km — ample for a
+
+> 100 km "near" threshold). **Payload:** ~68 KB raw / **~18 KB gzip**. **Why not fold into the
+> search index (D-016):** search needs `altNames`, geo needs `lat/lon` — different shapes, each
+> kept minimal; both stay separate lean endpoints. **Deferred (YAGNI):** timezone-bucket sharding
+> to shrink the payload further was considered but dropped — gzip already handles it and the
+> geo-index carries no timezone (the tz pick reuses `/tz-index.json`). **Invariant:** the deviation
+> number is always computed from exact longitude via `computeDeviation` (D-004/R-001); the
+> geo-index only supplies the _label_, never the number. Adopted with slice #7 (PR #47 / issue #7).
