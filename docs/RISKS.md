@@ -66,13 +66,14 @@ the primary clone (must be a linked worktree), plus `scripts/ticket-worktree.sh`
 paved path. `--no-verify` remains an escape hatch, so this is strong enforcement, not
 absolute — kept as `mitigated`, not `resolved`.
 
-## R-009 — GeoNames attribution not yet shown · open
+## R-009 — GeoNames attribution not yet shown · resolved
 
 Slice #5 ships a dataset derived from GeoNames `cities15000`, licensed **CC-BY 4.0** —
-the site must visibly credit GeoNames. No footer exists yet, so the attribution is
-currently absent from the rendered pages (noted only in `cities.ts`/`buildCities.ts`
-source headers). **Action:** add the GeoNames credit when the footer lands (slice #11);
-must be in place before the repo goes public / release (R-007).
+the site must visibly credit GeoNames. No footer existed, so the attribution was absent
+from rendered pages (noted only in `cities.ts`/`buildCities.ts` source headers).
+**Resolved in slice #11 (PR #58):** the footer now carries a visible “City data © GeoNames
+(CC BY 4.0)” credit linking geonames.org on **every page** (verified in `dist` on
+city/home/privacy). The R-007 release blocker for attribution is cleared.
 
 ## R-010 — OG generation build time · accepted
 
@@ -101,3 +102,17 @@ Preact fires `onChange` **per keystroke** (use `onInput`), and **`onBlur` does n
 test now pins the focus-out behavior. **Watch:** any future island interactivity on Preact must
 use the DOM-native event names (`onInput` / `onFocusOut`, capture-vs-bubble) rather than assuming
 React synthetic-event semantics — the type checker won't catch it.
+
+## R-013 — Shared symlinked node_modules breaks under parallel dep changes · mitigated
+
+`scripts/ticket-worktree.sh` symlinks each worktree's `node_modules` to the primary clone's
+(fix #37/#38). That's fine for isolated work, but when a **parallel** slice changes dependencies —
+its `npm install` mutates the shared `node_modules` — every other active worktree pointing at the
+same symlink breaks mid-flight. Hit twice: #44's React→Preact swap removed `@astrojs/react` and
+broke the parallel #11 worktree's typecheck/lint (~161 phantom errors), and the coordinator's
+docs worktrees needed a manual `npm install` after #9/#44 landed new deps in main.
+**Mitigation (manual):** run a worktree-local `npm ci` off the lockfile when the gate shows
+dependency errors during a parallel dep-changing slice (what the #11 worker did). **Watch /
+follow-up:** consider hardening `ticket-worktree.sh` — e.g. `npm ci` into the worktree instead of
+symlinking (or detect a lockfile/`node_modules` mismatch) when a concurrent slice touches deps.
+Acute only while two slices run in parallel and one changes `package.json`.

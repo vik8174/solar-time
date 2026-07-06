@@ -6,6 +6,34 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Slice #11 — Footer / Privacy / Feedback / Support
+
+- **Date:** 2026-07-06
+- **PR:** #58 (merged) · **Issue:** #11 (closed)
+- **What:** Site footer on every page (`Base.astro`, after `<slot />`):
+  `Privacy · Feedback · Support · GitHub` + a separate **GeoNames credit** line —
+  “City data © GeoNames (CC BY 4.0)” linking geonames.org. Styled via `tokens.css` (D-006),
+  quiet/minimal. **Closes the R-009 release blocker.**
+- **`/privacy`:** new `src/pages/privacy.astro` (uses `Base`), plain-language data policy —
+  geolocation computed in-browser and never sent, cookieless analytics, error-only monitoring
+  with coordinate scrubbing, no cookies/banner. Describes the policy (D-008); wires no SDK.
+  `noindex={!IS_PROD}` — indexable on prod like city pages (D-020).
+- **Support (Buy Me a Coffee):** a **plain link**, not the JS widget — a quiet dismissable line
+  after the result, gated by a `support` prop (on `/` and `/[city]`, off on `/privacy`). Dismiss
+  state persists in `localStorage`. Pure `shouldShowSupport(stored)` in
+  `src/lib/supportVisibility.ts` (100% covered, D-012); the `<script>` is a thin adapter bound on
+  `astro:page-load` so it re-binds across View Transitions. Both catch blocks `console.warn`
+  (no empty catch).
+- **Micro-copyright near 📍:** strengthened the home `.geo` line with a link to `/privacy`.
+- **Placeholders (`src/config/links.ts`) — need real values:** `SUPPORT_URL` (BMC) and
+  `FEEDBACK_URL` (Tally) are `REPLACE_ME`; `GITHUB_URL` points at the owner profile
+  `github.com/vik8174` (repo is private — R-007 — a repo link would 404; revisit when public).
+- **Verify:** typecheck / lint / format:check / test:coverage (100% on the new lib) / build
+  (1087 pages incl. `/privacy`) all green. code-reviewer → PASS WITH NOTES (all actionable
+  applied). GeoNames credit confirmed visible in `dist` on city/home/privacy.
+- **Infra note:** the worker's symlinked `node_modules` was poisoned mid-flight by parallel #44's
+  `npm install` (React→Preact) — fixed with a worktree-local `npm ci`. Recorded as **R-013**.
+
 ## Perf #44 — React → Preact for the search island
 
 - **Date:** 2026-07-06
