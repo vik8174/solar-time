@@ -6,6 +6,28 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix #50 — Wrap longitude offset across the antimeridian
+
+- **Date:** 2026-07-06
+- **PR:** #52 (merged) · **Issue:** #50 (closed)
+- **What:** Three antimeridian Pacific cities computed a physically impossible ~+24 h deviation
+  that also overflowed the `SolarScale` axis — Nuku'alofa **+1485 min**, Apia +1472, Mata-Utu
+  +1429 (West longitude but East UTC +13/+14, just across the date line). Found by the slice #8
+  verification (full-dataset build scan).
+- **Root cause (domain):** `longitudeOffsetMinutes = standardOffset − 4×longitude` never
+  normalized across the date line — for Nuku'alofa `780 − 4×(−175.2) = +1481`, exactly **1440
+  (24 h) above** the true ~+45 min. Solar time is cyclic; the offset wasn't wrapped.
+- **Fix:** new pure `wrapMinutes` folds `longitudeOffset` into **[−720, +720)** (mod 1440),
+  applied in `computeDeviation`. `total` is still derived from the wrapped component, so
+  **D-004's additive invariant holds** (`longitudeOffset + equationOfTime + dst === total`).
+  Normal cities are already in range → the wrap is a **no-op** for them; no `scaleWindow` / UI
+  change (WIDEST 720 now suffices). See **ADR D-018**.
+- **Verify:** RED test pinned the 3 antimeridian cases first (`/tdd`); existing domain tests
+  (Prague/Madrid/Kashgar/EoT/DST/on-meridian) pass unchanged. typecheck / lint / format /
+  test:coverage / build green. code-reviewer → PASS.
+- **Coordinator re-verification (full-dataset build scan):** **0 cities** now exceed ±720 (was
+  3); the trio resolves to sane values — Nuku'alofa **+45**, Apia **+32**, Mata-Utu **−11**.
+
 ## Fix #43 — Separate city name from matched alt-name in search results
 
 - **Date:** 2026-07-06
