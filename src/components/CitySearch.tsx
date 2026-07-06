@@ -44,6 +44,7 @@ const optionId = (index: number): string => `city-search-opt-${index}`;
 /** Default index loader — fetches the prerendered, first-party search index. */
 const fetchSearchIndex = async (): Promise<readonly SearchCity[]> => {
   const response = await fetch('/search-index.json');
+  if (!response.ok) throw new Error(`search index request failed: ${response.status}`);
   const data: unknown = await response.json();
   // Trusted first-party build artifact (see /search-index.json.ts).
   return Array.isArray(data) ? (data as SearchCity[]) : [];
@@ -79,12 +80,17 @@ export default function CitySearch({
   const [open, setOpen] = useState(false);
   const optionRefs = useRef<(HTMLAnchorElement | null)[]>([]);
 
-  // Load + build the fuzzy index once, after hydration.
+  // Load + build the fuzzy index once, after hydration. A failed load is logged
+  // and leaves the box inert rather than throwing an unhandled rejection.
   useEffect(() => {
     let cancelled = false;
-    void loadIndex().then((cities) => {
-      if (!cancelled) setIndex(buildCityIndex(cities));
-    });
+    void loadIndex()
+      .then((cities) => {
+        if (!cancelled) setIndex(buildCityIndex(cities));
+      })
+      .catch((error: unknown) => {
+        console.warn('CitySearch: failed to load search index', error);
+      });
     return () => {
       cancelled = true;
     };
@@ -108,7 +114,7 @@ export default function CitySearch({
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       setOpen(true);
-      setActiveIndex((i) => Math.min(i + 1, results.length - 1));
+      setActiveIndex((i) => Math.min(i + 1, Math.max(0, results.length - 1)));
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       setActiveIndex((i) => Math.max(i - 1, 0));
