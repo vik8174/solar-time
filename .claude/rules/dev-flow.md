@@ -10,7 +10,10 @@ scripts/ticket-worktree.sh <branch-name>   # e.g. chore/worktree-guardrail
 ```
 
 It fetches `origin`, creates `../solar-time-<branch>` on `<branch-name>`
-tracking `origin/main`, and prints the path to `cd` into.
+tracking `origin/main`, provisions the worktree's `node_modules` (symlinked
+from the primary clone, or `npm install` as a fallback), and prints the path to
+`cd` into. The symlink makes the `pre-push` gate (below) run immediately — no
+manual `npm install` needed.
 
 This is enforced by a committed **`pre-commit` git hook**
 ([`.githooks/pre-commit`](../../.githooks/pre-commit), wired by the same
