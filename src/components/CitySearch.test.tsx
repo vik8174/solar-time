@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/preact';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -103,6 +103,30 @@ describe('CitySearch', () => {
     expect(onSelect).toHaveBeenCalledTimes(1);
     const firstCity = CITIES[0]!;
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ slug: firstCity.slug }));
+  });
+
+  it('closes the open listbox when focus leaves the search box', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <CitySearch
+          loadIndex={() => Promise.resolve(CITIES)}
+          onSelect={vi.fn()}
+          onUseLocation={vi.fn()}
+        />
+        <button type="button">outside</button>
+      </>,
+    );
+
+    await user.type(screen.getByRole('combobox'), 'Prague');
+    await screen.findByRole('listbox');
+
+    // Move focus out of the component entirely (not onto a result link) — the
+    // box must close. Guards the `focusout` bubbling the React→Preact swap relies
+    // on: plain Preact's `onBlur` would not fire here, leaving the box stuck open.
+    await user.click(screen.getByRole('button', { name: 'outside' }));
+
+    expect(screen.queryByRole('listbox')).toBeNull();
   });
 
   it('closes the listbox when Escape is pressed with an empty query', async () => {
