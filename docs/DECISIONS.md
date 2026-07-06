@@ -231,3 +231,15 @@ prod-gated) lists the 1085 city URLs, excludes `/` (noindex, D-005) and all endp
 custom domain is a one-line change before prod is ever indexed — R-006). **Invariant:** `/` is
 always noindex; city pages are noindex on stage, indexable on prod. Adopted with slice #9
 (PR #54 / issue #9).
+
+## D-021 — Preact (not React) for client islands · accepted
+
+The one interactive island (`CitySearch`) shipped a ~184 KB React runtime on **every page** —
+a direct departure from D-001's "near-zero JS" ideal for a minimalist static tool. **Decision:**
+use **Preact** for islands, via a **full migration to `preact/hooks`** (not `@astrojs/preact`'s
+`compat` shim) so no React/`react-dom` alias ships. Measured payload drop for the per-page island:
+**raw −79.5 %** (221 → 45 KB), **gzip −74.9 %** (71 → 18 KB). Fuse.js and the pure
+`src/lib/citySearch.ts` logic are framework-agnostic and were untouched — only the component
+wrapper + test harness (`@testing-library/preact`) changed. **Assumption / guardrail:** future
+islands use Preact + `preact/hooks`; mind the event-model differences from React (see R-012).
+Realizes the D-001 intent that earlier slices deferred. Adopted with perf #44 (PR #56 / issue #44).

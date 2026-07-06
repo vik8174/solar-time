@@ -91,3 +91,13 @@ Latin-script, but the registry can grow to include **non-Latin city names** (Cyr
 **Mitigation in place:** a render failure degrades to the branded card (no broken build).
 **Action:** when a non-Latin name enters the dataset, either add a broad-coverage fallback font to
 the satori pipeline or keep the deliberate brand-card fallback for uncovered names.
+
+## R-012 — Preact event model differs from React · mitigated
+
+The React→Preact swap (D-021) exposed behavioral gaps that compile fine but break at runtime:
+Preact fires `onChange` **per keystroke** (use `onInput`), and **`onBlur` does not bubble** (use
+`onFocusOut`). The latter was a real focus-handling regression in `CitySearch`, caught by
+`code-reviewer` before merge. **Mitigation:** both fixed in perf #44 (PR #56), and a regression
+test now pins the focus-out behavior. **Watch:** any future island interactivity on Preact must
+use the DOM-native event names (`onInput` / `onFocusOut`, capture-vs-bubble) rather than assuming
+React synthetic-event semantics — the type checker won't catch it.
