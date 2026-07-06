@@ -172,6 +172,10 @@ export default function CitySearch({
                 id={optionId(i)}
                 role="option"
                 aria-selected={i === activeIndex}
+                // Accessible name = the city itself; the matched alt is a
+                // decorative visual hint (why the row matched), so it must not
+                // glue onto the name for a screen reader (issue #43).
+                aria-label={city.name}
                 className="city-search__option"
                 href={`/${city.slug}`}
                 data-astro-prefetch
@@ -183,9 +187,11 @@ export default function CitySearch({
                   selectCity(city);
                 }}
               >
-                {city.name}
+                <span className="city-search__option-name">{city.name}</span>
                 {city.altNames.length > 0 && (
-                  <span className="city-search__option-alt">{city.altNames[0]}</span>
+                  <span className="city-search__option-alt" aria-hidden="true">
+                    {city.altNames[0]}
+                  </span>
                 )}
               </a>
             </li>

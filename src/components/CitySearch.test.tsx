@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -145,6 +145,21 @@ describe('CitySearch', () => {
     const option = await screen.findByRole('option', { name: /Prague/ });
     // Prague has an alt name 'Praha'
     expect(option.textContent).toContain('Praha');
+  });
+
+  it('exposes the city name — not glued with the alt — as the option accessible name', async () => {
+    const user = userEvent.setup();
+    renderSearch();
+
+    // Diacritic-tolerant match on Munich, whose alt name is 'München'.
+    await user.type(screen.getByRole('combobox'), 'munchen');
+
+    // Accessible name must be exactly the city — never "MunichMünchen".
+    const option = await screen.findByRole('option', { name: 'Munich' });
+    expect(option).toBeDefined();
+    // The alt still renders as a visible, but decorative (aria-hidden), hint.
+    const alt = within(option).getByText('München');
+    expect(alt.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('handles consecutive ArrowDown presses', async () => {
