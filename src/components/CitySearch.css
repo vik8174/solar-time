@@ -62,7 +62,14 @@
 .city-search__option-alt {
   color: var(--muted);
   font-size: 12px;
-  margin-left: 6px;
+  margin-left: 8px;
+}
+
+/* Decorative separator between the city name and its matched alt-name hint. */
+.city-search__option-alt::before {
+  content: '·';
+  margin-right: 8px;
+  color: var(--muted-dim);
 }
 
 .city-search__empty {
