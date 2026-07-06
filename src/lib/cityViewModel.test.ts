@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Deviation } from '../domain/solarTime';
-import { buildCityViewModel } from './cityViewModel';
+import { type BreakdownRow, buildCityViewModel } from './cityViewModel';
 
 const PRAGUE = { name: 'Prague', coords: '50.08°N, 14.44°E' };
 
@@ -65,6 +65,44 @@ describe('buildCityViewModel', () => {
     expect(byKey.get('equationOfTime')?.value).toBe('+4');
     expect(byKey.get('dst')?.value).toBe('+60');
     expect(byKey.get('total')?.value).toBe('+66');
+  });
+
+  it('makes the shown breakdown rows sum to the shown total', () => {
+    // Independent rounding would show +2 +4 +60 = 66 against a +67 total.
+    const bug: Deviation = {
+      longitudeOffset: 2.4,
+      equationOfTime: 4.4,
+      dst: 60.4,
+      total: 67.2,
+      solarNoon: 787.2,
+    };
+    const vm = buildCityViewModel(PRAGUE, bug);
+    const shown = (key: BreakdownRow['key']): number =>
+      Number(vm.breakdown.find((r) => r.key === key)?.value);
+    const parts = shown('longitude') + shown('equationOfTime') + shown('dst');
+    expect(parts).toBe(shown('total'));
+  });
+
+  it('reconciles parts with the total across positive and negative deviations', () => {
+    for (let lon = -6; lon <= 6; lon += 0.5) {
+      for (let eot = -4; eot <= 4; eot += 0.5) {
+        for (const dst of [0, 30, 60]) {
+          const total = lon + eot + dst;
+          const d: Deviation = {
+            longitudeOffset: lon,
+            equationOfTime: eot,
+            dst,
+            total,
+            solarNoon: 720 + total,
+          };
+          const vm = buildCityViewModel(PRAGUE, d);
+          const shown = (key: BreakdownRow['key']): number =>
+            Number(vm.breakdown.find((r) => r.key === key)?.value);
+          const parts = shown('longitude') + shown('equationOfTime') + shown('dst');
+          expect(parts).toBe(shown('total'));
+        }
+      }
+    }
   });
 
   it('marks a zero component so the UI can dim it, but still lists it', () => {

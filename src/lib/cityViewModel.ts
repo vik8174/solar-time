@@ -5,6 +5,7 @@
  */
 
 import type { Deviation } from '../domain/solarTime';
+import { apportionMinutes } from './apportionMinutes';
 import { formatClock, isInSync, signedMinutes } from './format';
 import { scaleGeometry, type ScaleGeometry } from './scaleGeometry';
 
@@ -62,13 +63,18 @@ const buildLeadText = (total: number): string => {
   return `Your clock runs ${magnitude} ${unit} ${direction} the sun.`;
 };
 
-/** One breakdown row from a raw component value. */
-const row = (key: Exclude<BreakdownRow['key'], 'total'>, value: number): BreakdownRow => ({
+/**
+ * One breakdown row from an already-apportioned whole-minute value.
+ *
+ * The value is the integer chosen by `apportionMinutes`, not the raw component,
+ * so the row's sign and its `zero` flag reflect exactly what the reader sees.
+ */
+const row = (key: Exclude<BreakdownRow['key'], 'total'>, minutes: number): BreakdownRow => ({
   key,
   label: HINTS[key].label,
   hint: HINTS[key].hint,
-  value: signedMinutes(value),
-  zero: Math.round(value) === 0,
+  value: signedMinutes(minutes),
+  zero: minutes === 0,
 });
 
 /**
@@ -80,6 +86,13 @@ const row = (key: Exclude<BreakdownRow['key'], 'total'>, value: number): Breakdo
  */
 export const buildCityViewModel = (city: CityIdentity, d: Deviation): CityViewModel => {
   const synced = isInSync(d.total);
+  // Round the three components together so the shown rows sum to the shown
+  // total (largest-remainder); D-004's raw additive invariant is untouched.
+  const [longitude = 0, equationOfTime = 0, dst = 0] = apportionMinutes([
+    d.longitudeOffset,
+    d.equationOfTime,
+    d.dst,
+  ]);
   return {
     cityName: city.name,
     coords: city.coords,
@@ -90,9 +103,9 @@ export const buildCityViewModel = (city: CityIdentity, d: Deviation): CityViewMo
     solarNoonText: `Real solar noon today is at ${formatClock(d.solarNoon)}.`,
     solarNoonLabel: formatClock(d.solarNoon),
     breakdown: [
-      row('longitude', d.longitudeOffset),
-      row('equationOfTime', d.equationOfTime),
-      row('dst', d.dst),
+      row('longitude', longitude),
+      row('equationOfTime', equationOfTime),
+      row('dst', dst),
       { key: 'total', label: 'Total', hint: '', value: signedMinutes(d.total), zero: false },
     ],
     geometry: scaleGeometry(d.total),
