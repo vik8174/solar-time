@@ -6,6 +6,26 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Slice #6 — City search
+
+- **Date:** 2026-07-06
+- **PR:** #40 (merged) · **Issue:** #6 (closed)
+- **What:** Fuzzy city search on every page. `CitySearch` React island (combobox: arrow/Enter/Esc
+  keyboard nav, ARIA) over a Fuse.js index; select → navigate to `/[city]`; empty → hint + geo
+  fallback via `resolveDefaultCity`.
+- **Lean search index (ADR D-016):** `src/lib/searchIndex.ts` projects the full registry to
+  `{ slug, name, altNames }`; served as a prerendered static endpoint `/search-index.json`
+  (+ `/tz-index.json`) that the island fetches lazily on idle — not inlined, not bundled.
+  The deliberate exception to D-013 (search needs all cities client-side), kept minimal.
+- **Pure logic under the gate:** `src/lib/citySearch.ts` (build Fuse index + query + rank),
+  diacritic/case normalization (NFD → strip marks → lowercase), Fuse typo tolerance. Lives in
+  `src/lib` so it falls under the D-012 coverage floor; component is a thin shell.
+- **Navigation:** `astro.config.mjs` adds `prefetch: { defaultStrategy: 'hover' }` +
+  `<ClientRouter />` View Transitions; new `src/layouts/Base.astro` hosts the search on all pages.
+- **Deps/config:** `fuse.js` 7.4.2, `@astrojs/react` integration added (exact); `vitest.config`
+  scope + `tsconfig` touched.
+- **Verify:** typecheck / lint / format / test:coverage / build all green (per PR #40).
+
 ## Chore — `ticket-worktree.sh` provisions node_modules
 
 - **Date:** 2026-07-06

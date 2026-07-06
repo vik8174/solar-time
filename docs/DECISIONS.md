@@ -152,3 +152,19 @@ thing one command. **Escape hatch:** `git commit --no-verify` bypasses it, so th
 enforcement, not absolute — CI + review remain the backstop. The coordinator commits docs in a
 linked worktree on a chore branch, which the guard allows by design. Mitigates R-008
 (PR #35 / issue #28).
+
+## D-016 — Lean, lazily-fetched search index (deliberate D-013 exception) · accepted
+
+City search needs _all_ cities on the client — the opposite of D-013, which keeps the full
+registry out of the per-page deviation island. Reconciled by shipping a **minimal** index:
+`toSearchIndex` (`src/lib/searchIndex.ts`) projects the registry to `{ slug, name, altNames }`
+only (dropping longitude/timeZone/population/coords), served as a **prerendered static
+endpoint** `/search-index.json` (and `/tz-index.json` for timezone→city). The `CitySearch`
+island fetches it **lazily on idle** and builds the Fuse.js index client-side. **Why an
+endpoint, not inlining:** kept out of every page's initial HTML, cacheable, and reused across
+navigations. **Why keep it lean:** the payload is the one unavoidable "ship the registry" cost,
+so it carries only search fields. **Invariant:** the per-page deviation island stays untouched
+(D-013 holds); search is a separate, lazily-loaded island. **Assumption:** new searchable
+attributes must be weighed against payload size before being added to the index shape. Fuzzy
+logic (`src/lib/citySearch.ts`) is pure and under the D-012 gate; diacritic/case-insensitive
+via NFD normalization; typo tolerance from Fuse. Adopted with slice #6 (PR #40 / issue #6).
