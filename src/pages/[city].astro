@@ -11,10 +11,12 @@ import type { GetStaticPaths } from 'astro';
 import Breakdown from '../components/Breakdown.astro';
 import HeroNumber from '../components/HeroNumber.astro';
 import SolarScale from '../components/SolarScale.astro';
+import { IS_PROD } from '../config/site';
 import { CITIES } from '../data/cities';
 import { computeDeviation } from '../domain/solarTime';
 import Base from '../layouts/Base.astro';
 import { buildCityViewModel } from '../lib/cityViewModel';
+import { seoMeta } from '../lib/seoMeta';
 
 export const getStaticPaths = (() =>
   CITIES.map((city) => ({
@@ -30,9 +32,18 @@ const deviation = computeDeviation({
   date: new Date(),
 });
 const vm = buildCityViewModel({ name: city.name, coords: city.coords }, deviation);
+// SEO/share metadata from the same build-time deviation (D-003). City pages are
+// indexable on prod, noindex on stage (D-019).
+const meta = seoMeta({ name: city.name, slug: city.slug }, deviation);
 ---
 
-<Base title={`Solar time in ${vm.cityName}`}>
+<Base
+  title={meta.title}
+  description={meta.description}
+  canonicalPath={meta.canonicalPath}
+  ogImagePath={meta.ogImagePath}
+  noindex={!IS_PROD}
+>
   <main
     class="page"
     data-city-slug={city.slug}

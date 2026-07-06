@@ -17,13 +17,25 @@ import CitySearch from '../components/CitySearch.tsx';
 import '../styles/tokens.css';
 
 interface Props {
-  /** Document title. */
+  /** Document title (also og:title / twitter:title). */
   title: string;
+  /** Meta description (also og:description / twitter:description). */
+  description?: string;
+  /** Site-relative canonical path, e.g. `/prague`; absolutized against `site`. */
+  canonicalPath?: string;
+  /** Site-relative OG image path, e.g. `/og/prague.png`; absolutized against `site`. */
+  ogImagePath?: string;
   /** Emit `<meta name="robots" content="noindex">` (e.g. the live home page). */
   noindex?: boolean;
 }
 
-const { title, noindex = false } = Astro.props;
+const { title, description, canonicalPath, ogImagePath, noindex = false } = Astro.props;
+
+// Absolutize the site-relative paths against `site` (set per build target in
+// astro.config, D-019). Guarded so the tags drop cleanly if `site` is unset.
+const site = Astro.site;
+const canonical = canonicalPath && site ? new URL(canonicalPath, site).href : undefined;
+const ogImage = ogImagePath && site ? new URL(ogImagePath, site).href : undefined;
 ---
 
 <html lang="en">
@@ -34,6 +46,29 @@ const { title, noindex = false } = Astro.props;
     {noindex && <meta name="robots" content="noindex" />}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    {canonical && <link rel="canonical" href={canonical} />}
+
+    <meta property="og:title" content={title} />
+    {description && <meta property="og:description" content={description} />}
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Solar Time" />
+    {canonical && <meta property="og:url" content={canonical} />}
+    {
+      ogImage && (
+        <>
+          <meta property="og:image" content={ogImage} />
+          <meta property="og:image:width" content="1200" />
+          <meta property="og:image:height" content="630" />
+          <meta property="og:image:alt" content={title} />
+        </>
+      )
+    }
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    {description && <meta name="twitter:description" content={description} />}
+    {ogImage && <meta name="twitter:image" content={ogImage} />}
     <ClientRouter />
   </head>
   <body>
