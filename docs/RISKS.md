@@ -51,15 +51,20 @@ also flip repo public and add analytics keys then.
 Portfolio value needs a public repo. Kept private until release-ready. Flip to public
 at release (couples with R-003 branch protection and R-006 domain).
 
-## R-008 — Multiple agent sessions share one working copy · open
+## R-008 — Multiple agent sessions share one working copy · mitigated
 
 Slice #4 worker ran in the same clone (`~/Projects/solar-time`) as the coordinator. It
 branched `feat/city-page` off an in-flight docs branch instead of `main`, and a
 coordinator commit landed on the worker's branch because `HEAD` was switched underneath.
 The docs infra got swept into the slice #4 squash — harmless this time, but
-uncontrolled. **Action:** each worker session must run in its own `git worktree` (see
-the `/worktree` skill), branched from `main`. Coordinator work also uses a separate
-worktree. Never two sessions on one working tree.
+uncontrolled. **Action:** each worker session must run in its own `git worktree`,
+branched from `main`. Coordinator work also uses a separate worktree. Never two sessions
+on one working tree.
+**Mitigated in issue #28 (PR #35, D-015):** the convention is now enforced by a committed
+`.githooks/pre-commit` guard that hard-blocks commits on `main`/`stage` and commits made in
+the primary clone (must be a linked worktree), plus `scripts/ticket-worktree.sh` as the
+paved path. `--no-verify` remains an escape hatch, so this is strong enforcement, not
+absolute — kept as `mitigated`, not `resolved`.
 
 ## R-009 — GeoNames attribution not yet shown · open
 

@@ -137,3 +137,18 @@ transitive tree; acceptable because it's dev-only and never ships to the static 
 **Alternative considered:** global `firebase` + a README prerequisite (lighter tree, but
 unpinned and non-reproducible across machines). Adopted with the deploy-scripts chore
 (PR #33 / issue #27).
+
+## D-015 — Per-ticket worktree isolation enforced by a pre-commit guard · accepted
+
+R-008 (each session in its own git worktree off `main`) was convention-only and the slice #4
+incident proved convention fails. Now enforced technically by a committed `.githooks/pre-commit`
+that hard-blocks a commit when the branch is `main`/`stage` OR the commit is made in the
+**primary clone** rather than a linked worktree (detected via `git rev-parse --absolute-git-dir`
+vs the resolved `--git-common-dir`). Wired through the existing `core.hooksPath` (D-012's
+`prepare` script). Paired with `scripts/ticket-worktree.sh <branch>` — the paved path that
+provisions `../solar-time-<branch>` off fresh `origin/main` — referenced from `dev-flow.md`.
+**Why guard + script:** the hook makes the wrong thing impossible; the script makes the right
+thing one command. **Escape hatch:** `git commit --no-verify` bypasses it, so this is strong
+enforcement, not absolute — CI + review remain the backstop. The coordinator commits docs in a
+linked worktree on a chore branch, which the guard allows by design. Mitigates R-008
+(PR #35 / issue #28).

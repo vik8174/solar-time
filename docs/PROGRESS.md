@@ -6,6 +6,19 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Chore — Worktree isolation guardrail (R-008 enforced)
+
+- **Date:** 2026-07-05
+- **PR:** #35 (merged) · **Issue:** #28 (closed)
+- **What:** Turned the R-008 convention into a technical guarantee (see ADR D-015).
+- **Guardrail:** committed `.githooks/pre-commit` hard-blocks commits on `main`/`stage` and
+  commits in the primary clone (must be a linked worktree). Detection via
+  `git rev-parse --absolute-git-dir` vs resolved `--git-common-dir`.
+- **Paved path:** `scripts/ticket-worktree.sh <branch>` provisions `../solar-time-<branch>`
+  off a fresh `origin/main`. `dev-flow.md` documents both. `--no-verify` stays an escape hatch.
+- **Note:** dogfooded — this very journal PR was authored in a worktree created by
+  `scripts/ticket-worktree.sh`, and the pre-commit guard correctly allowed the commit.
+
 ## Chore — Deploy scripts (stage/prod) + README refresh
 
 - **Date:** 2026-07-05
