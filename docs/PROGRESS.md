@@ -6,6 +6,19 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Chore — `ticket-worktree.sh` provisions node_modules
+
+- **Date:** 2026-07-06
+- **PR:** #38 (merged) · **Issue:** #37 (closed)
+- **What:** Closed the paved-path friction from D-015 — a fresh worktree had no
+  `node_modules`, so the `pre-push` gate (D-012) failed until a manual `npm install`.
+- **Fix:** `scripts/ticket-worktree.sh` now symlinks the primary clone's `node_modules`
+  into the new worktree (falls back to `npm install` when the primary has none), so
+  `pre-push` runs immediately. `.gitignore` adjusted (`node_modules` without trailing
+  slash) so the symlink stays untracked; `dev-flow.md` updated.
+- **Dogfooded:** this journal PR was pushed from a `ticket-worktree.sh` worktree — the
+  symlink was created and the `pre-push` gate passed with no manual install.
+
 ## Chore — Worktree isolation guardrail (R-008 enforced)
 
 - **Date:** 2026-07-05
