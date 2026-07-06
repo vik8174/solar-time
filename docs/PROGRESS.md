@@ -6,6 +6,32 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix #42 — Breakdown rows reconcile with the displayed total
+
+- **Date:** 2026-07-06
+- **PR:** #45 (merged) · **Issue:** #42 (closed)
+- **What:** The city page rounded each breakdown component independently with `Math.round`, so
+  the shown parts could sum to a different integer than the shown total — **/prague** showed
+  `+2 +4 +60` (=66) against a `+67` total. At the current build date this hit **452 of 1085
+  cities**. Resolves QA finding #1 from slice #6.
+- **Fix (display-only):** new pure helper `src/lib/apportionMinutes.ts` — signed
+  largest-remainder (Hamilton) apportionment: rounds each component to the nearest minute, then
+  hands the ±1 leftover to the components whose fractional remainder is closest to flipping.
+  The target is the components' **own rounded sum**, derived inside the helper (no `total`
+  parameter — a mismatched total is unrepresentable, SSOT / type-safety).
+- **Wiring:** `cityViewModel.ts` apportions the three components before formatting;
+  `signedMinutes` stays the single-value formatter. The inline client recompute already calls
+  `cityViewModel`, so build-time and client render both get the fix (R-001 / D-013).
+- **Domain untouched:** `computeDeviation` and **D-004**'s additive invariant hold on the
+  _unrounded_ values — this only changes how `cityViewModel` rounds for display. No new ADR.
+- **Tests:** `apportionMinutes.test.ts` (parts-sum-to-total across a swept range — positive,
+  negative, mixed, rounding boundaries, single-element, empty, the Prague case);
+  `cityViewModel.test.ts` (shown rows sum to shown total; existing hero/lead/zero behaviour
+  unchanged).
+- **Verify:** typecheck / lint / format / test:coverage (100% stmts·lines·funcs, 95.83%
+  branches) / build all green. code-reviewer → PASS WITH NOTES (the "derive total internally"
+  note applied pre-merge).
+
 ## Slice #6 — City search
 
 - **Date:** 2026-07-06
