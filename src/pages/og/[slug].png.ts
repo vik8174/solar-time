@@ -1,5 +1,5 @@
 /**
- * /og/<slug>.png — the per-city Open Graph card, generated at build (ADR D-018).
+ * /og/<slug>.png — the per-city Open Graph card, generated at build (ADR D-019).
  *
  * Prerendered one PNG per city: the same `computeDeviation` → `ogCardModel` SSOT
  * as the page (R-001) feeds the pure card model, and `renderCityCard` (satori +

@@ -1,5 +1,5 @@
 /**
- * site — build-time environment split (ADR D-019).
+ * site — build-time environment split (ADR D-020).
  *
  * A single `SITE_ENV` flag distinguishes the two Firebase targets (D-002):
  * `deploy:prod` runs `SITE_ENV=prod npm run build`; every other build (local,

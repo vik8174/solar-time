@@ -33,7 +33,7 @@ const deviation = computeDeviation({
 });
 const vm = buildCityViewModel({ name: city.name, coords: city.coords }, deviation);
 // SEO/share metadata from the same build-time deviation (D-003). City pages are
-// indexable on prod, noindex on stage (D-019).
+// indexable on prod, noindex on stage (D-020).
 const meta = seoMeta({ name: city.name, slug: city.slug }, deviation);
 ---
 
