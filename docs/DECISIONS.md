@@ -178,12 +178,27 @@ registry. Rather than widen either, ship a **separate lean geo-index**: `toGeoIn
 prerendered static endpoint **`/geo-index.json`**, fetched **lazily and only for the geo flow**
 (the 📍 path), then consumed by the pure `findNearestCity(lat, lon)` (haversine, under the D-012
 gate). **Latitude source:** the registry stores no numeric latitude, so it's parsed from the
-city's `coords` display string; both coords **rounded to 2 decimals** (~1 km — ample for a
+city's `coords` display string; both coords **rounded to 2 decimals** (~1 km — ample for the
+100 km "near" cutoff). **Payload:** ~68 KB raw / **~18 KB gzip**. **Why not fold into the
+search index (D-016):** search needs `altNames`, geo needs `lat/lon` — different shapes, each
+kept minimal; both stay separate lean endpoints. **Deferred (YAGNI):** timezone-bucket sharding
+to shrink the payload further was considered but dropped — gzip already handles it and the
+geo-index carries no timezone (the tz pick reuses `/tz-index.json`). **Invariant:** the deviation
+number is always computed from exact longitude via `computeDeviation` (D-004/R-001); the
+geo-index only supplies the _label_, never the number. Adopted with slice #7 (PR #47 / issue #7).
 
-> 100 km "near" threshold). **Payload:** ~68 KB raw / **~18 KB gzip**. **Why not fold into the
-> search index (D-016):** search needs `altNames`, geo needs `lat/lon` — different shapes, each
-> kept minimal; both stay separate lean endpoints. **Deferred (YAGNI):** timezone-bucket sharding
-> to shrink the payload further was considered but dropped — gzip already handles it and the
-> geo-index carries no timezone (the tz pick reuses `/tz-index.json`). **Invariant:** the deviation
-> number is always computed from exact longitude via `computeDeviation` (D-004/R-001); the
-> geo-index only supplies the _label_, never the number. Adopted with slice #7 (PR #47 / issue #7).
+## D-018 — Longitude offset normalized across the antimeridian · accepted
+
+Solar time is **cyclic** (period 24 h), but `longitudeOffsetMinutes = standardOffset − 4×longitude`
+computed a raw value that could sit a full day off for places whose longitude and UTC offset
+straddle the date line (West longitude, East UTC +13/+14: Tonga, Samoa, Wallis). Nuku'alofa read
++1485 min (~24.75 h) instead of ~+45 — exactly 1440 min high — and the marker left the scale.
+**Decision:** a pure `wrapMinutes` folds the longitude offset into the principal range
+**[−720, +720)** (mod 1440); `computeDeviation` applies it to `longitudeOffset`, and `total`
+stays the sum of the three components. **Why wrap the component, not `total`:** it keeps **D-004's
+additive invariant** (`longitudeOffset + equationOfTime + dst === total`) intact while making the
+offset itself physically meaningful. **No-op for normal cities** (already in range), so existing
+domain tests are unchanged; **no `scaleWindow`/UI change** (WIDEST 720 now always suffices — the
+domain, not the scale, was the bug). **Assumption:** ±720 min is the correct principal range for a
+clock-vs-sun deviation; any real value outside it indicates a date-line artifact, not a real
+offset. Found by the slice #8 verification scan. Adopted with fix #50 (PR #52 / issue #50).
