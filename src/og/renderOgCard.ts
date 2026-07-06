@@ -148,11 +148,12 @@ const brandCard = (title: string, subtitle: string): Node =>
 
 /** Rasterizes a satori VDOM to PNG bytes at OG dimensions. */
 const toPng = async (node: Node): Promise<Uint8Array<ArrayBuffer>> => {
-  // JUSTIFIED: satori's first arg is typed as its own JSX `ReactNode`; our
-  // minimal hand-rolled `Node` VDOM is structurally what satori consumes at
-  // runtime but is not nominally that type, and we avoid a JSX runtime on
-  // purpose (see the `Node` interface above). `as never` opts this one call out.
-  const svg = await satori(node as never, { width: WIDTH, height: HEIGHT, fonts });
+  // satori types its first arg as `ReactNode` (imported from `react`). With
+  // React removed from the project (the island runs on Preact) that import
+  // resolves to `any` under `skipLibCheck`, so our minimal hand-rolled
+  // `Node` VDOM — deliberately not a JSX runtime (see the `Node` interface
+  // above) — is accepted directly, with no cast needed.
+  const svg = await satori(node, { width: WIDTH, height: HEIGHT, fonts });
   const raw = new Resvg(svg, { fitTo: { mode: 'width', value: WIDTH } }).render().asPng();
   // Copy into a fresh ArrayBuffer-backed Uint8Array: resvg returns a Node Buffer
   // (`Uint8Array<ArrayBufferLike>`), which strictest TS won't accept as the DOM

@@ -15,7 +15,8 @@
  * @example
  * <CitySearch client:idle transition:persist />
  */
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import type { JSX, TargetedKeyboardEvent } from 'preact';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 
 import { resolveDefaultCity, type ZoneCity } from '../lib/resolveDefaultCity';
 import { buildCityIndex, searchCities, type CityIndex, type SearchCity } from '../lib/citySearch';
@@ -73,7 +74,7 @@ export default function CitySearch({
   loadIndex = fetchSearchIndex,
   onSelect,
   onUseLocation = resolveByTimeZone,
-}: CitySearchProps): React.JSX.Element {
+}: CitySearchProps): JSX.Element {
   const [index, setIndex] = useState<CityIndex | null>(null);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
@@ -110,7 +111,7 @@ export default function CitySearch({
     // Otherwise the <a> navigates natively (ClientRouter → View Transition).
   };
 
-  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
+  const onKeyDown = (event: TargetedKeyboardEvent<HTMLInputElement>): void => {
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       setOpen(true);
@@ -134,8 +135,16 @@ export default function CitySearch({
   return (
     <div
       className="city-search"
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+      // `onFocusOut` (native, bubbling `focusout`) — NOT `onBlur`: Preact attaches
+      // `onBlur` as a literal non-bubbling `blur` listener on this div, so it would
+      // never fire for focus leaving the inner input (React's synthetic onBlur
+      // bubbles; plain Preact's does not). `focusout` bubbles from the input up.
+      onFocusOut={(event) => {
+        // Close unless focus moved to a child (e.g. a result link). `relatedTarget`
+        // is `EventTarget | null`; narrow to `Node` so `.contains` stays type-safe
+        // and a focus-to-nothing (null) correctly closes the box.
+        const next = event.relatedTarget;
+        if (!(next instanceof Node) || !event.currentTarget.contains(next)) setOpen(false);
       }}
     >
       <input
@@ -150,8 +159,10 @@ export default function CitySearch({
         autoComplete="off"
         placeholder="Search a city…"
         value={query}
-        onChange={(event) => {
-          setQuery(event.target.value);
+        onInput={(event) => {
+          // Preact fires `onInput` per keystroke (its `onChange` is the native,
+          // on-commit event — unlike React). `currentTarget` is the typed input.
+          setQuery(event.currentTarget.value);
           setActiveIndex(0);
           setOpen(true);
         }}

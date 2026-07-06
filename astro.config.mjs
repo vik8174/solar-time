@@ -1,7 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 
-import react from '@astrojs/react';
+import preact from '@astrojs/preact';
 import sitemap from '@astrojs/sitemap';
 
 import { IS_PROD, SITE_URL } from './src/config/site.ts';
@@ -21,7 +21,7 @@ export default defineConfig({
   // Transitions. See slice #6 / ADR D-016.
   prefetch: { defaultStrategy: 'hover' },
   integrations: [
-    react(),
+    preact(),
     // Sitemap is prod-only (D-019). Exclude the noindex home (`/`, D-005) and
     // the non-page endpoints (anything with a file extension: *.png/*.json/etc).
     ...(IS_PROD
