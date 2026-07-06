@@ -37,7 +37,13 @@ const deviation = computeDeviation({
 const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, deviation);
 ---
 
-<Base title="Solar Time — how far your clock is from the sun" noindex>
+<Base
+  title="Solar Time — how far your clock is from the sun"
+  description="See how far your clock runs from true solar time, live for your location — the exact minutes, real solar noon, and the longitude, equation-of-time, and daylight-saving breakdown."
+  canonicalPath="/"
+  ogImagePath="/og/home.png"
+  noindex
+>
   <main class="page" data-home-longitude={neutral.longitude} data-home-timezone={neutral.timeZone}>
     <div class="content">
       <p class="eyebrow">
