@@ -6,6 +6,29 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix #43 — Separate city name from matched alt-name in search results
+
+- **Date:** 2026-07-06
+- **PR:** #49 (merged) · **Issue:** #43 (closed)
+- **What:** Search result options concatenated the city name and its first matched alt-name with
+  no separator, so each option's **accessible name** read as one run — "MunichMünchen",
+  "FunchalFNC", "YunchengAn-i-hsien". A screen reader announced it as a single word; visually
+  cramped too. Resolves QA finding #2 from slice #6.
+- **Fix (a11y / display-only):** the `role="option"` anchor gets a clean accessible name via
+  `aria-label={city.name}`; the alt-name `<span>` is marked `aria-hidden="true"` (decorative
+  visual hint — _why_ the row matched, not part of the name); a muted CSS `::before` "·"
+  separator adds visual separation. ARIA combobox/listbox semantics and keyboard nav
+  (`aria-selected`, `aria-activedescendant`, `optionId`, Arrow/Enter/Esc) untouched.
+- **Scope:** `CitySearch.tsx` + `CitySearch.css` + `CitySearch.test.tsx` only — no domain /
+  `src/lib` change. Ran in parallel with slice #7 (disjoint files, clean rebase).
+- **Tests:** behavioral regression — types a diacritic query and asserts the option's
+  accessible name is exactly `Munich` (not `MunichMünchen`) and the alt still renders as an
+  `aria-hidden` hint.
+- **Verify:** typecheck / lint / format / test:coverage / build all green. code-reviewer → PASS.
+- **Note:** trade-off — the alt is now `aria-hidden`, so a screen reader no longer announces
+  "why it matched"; accepted, the alt is a purely visual hint and the clean city name is the
+  a11y win.
+
 ## Slice #7 — Live geolocation mode on `/`
 
 - **Date:** 2026-07-06
