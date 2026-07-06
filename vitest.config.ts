@@ -13,11 +13,11 @@ import { getViteConfig } from 'astro/config';
  */
 export default getViteConfig({
   test: {
-    include: ['src/**/*.{test,spec}.ts'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
     coverage: {
       provider: 'v8',
       include: ['src/lib/**/*.ts', 'src/domain/**/*.ts'],
-      exclude: ['src/**/*.{test,spec}.ts'],
+      exclude: ['src/**/*.{test,spec}.{ts,tsx}'],
       thresholds: { statements: 90, lines: 90, functions: 90, branches: 80 },
     },
   },
