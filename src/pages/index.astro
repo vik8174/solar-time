@@ -3,24 +3,24 @@
  * Placeholder landing page.
  *
  * Trivial page for the skeleton slice — proves the full delivery pipeline
- * (build → CI → Firebase preview/stage deploy) before real UI lands.
- * Carries noindex until the site is production-ready.
+ * (build → CI → Firebase preview/stage deploy) before real UI lands. Carries
+ * noindex until the live geo mode (slice #7) replaces it; it reuses `Base` so
+ * the site-wide search is present here too.
  */
+import Base from '../layouts/Base.astro';
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="robots" content="noindex" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="generator" content={Astro.generator} />
-    <title>Solar Time — coming soon</title>
-  </head>
-  <body>
-    <main>
-      <h1>Solar Time</h1>
-      <p>How far your clock drifts from the sun. Coming soon.</p>
-    </main>
-  </body>
-</html>
+<Base title="Solar Time — coming soon" noindex>
+  <main class="home">
+    <h1>Solar Time</h1>
+    <p>How far your clock drifts from the sun. Search a city to see its deviation.</p>
+  </main>
+</Base>
+
+<style>
+  .home {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 40px 20px;
+  }
+</style>

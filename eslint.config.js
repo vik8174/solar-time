@@ -42,7 +42,7 @@ export default defineConfig(
   {
     // `!` is necessary under `strictest` tsconfig (e.g. `ticks[i]!`); allow it
     // in tests only, where the invariant is guaranteed by the test setup.
-    files: ['**/*.test.ts'],
+    files: ['**/*.test.{ts,tsx}'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
     },

@@ -1,0 +1,51 @@
+---
+/**
+ * Base — the shared page shell (slice #6).
+ *
+ * Owns the `<head>`, the design tokens, and the site-wide `CitySearch` island so
+ * search lives in exactly one place across every page. `<ClientRouter />` adds
+ * View Transitions (smooth `/${slug}` navigation + hover-prefetch of results);
+ * the header is `transition:persist`ed so the search box and its already-built
+ * index survive navigations instead of re-hydrating each time.
+ *
+ * @example
+ * <Base title="Solar time in Prague">…page…</Base>
+ */
+import { ClientRouter } from 'astro:transitions';
+
+import CitySearch from '../components/CitySearch.tsx';
+import '../styles/tokens.css';
+
+interface Props {
+  /** Document title. */
+  title: string;
+  /** Emit `<meta name="robots" content="noindex">` (e.g. the live home page). */
+  noindex?: boolean;
+}
+
+const { title, noindex = false } = Astro.props;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    {noindex && <meta name="robots" content="noindex" />}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+    <ClientRouter />
+  </head>
+  <body>
+    <header class="site-header" transition:persist>
+      <CitySearch client:idle />
+    </header>
+    <slot />
+  </body>
+</html>
+
+<style>
+  .site-header {
+    padding: 16px 20px 0;
+  }
+</style>

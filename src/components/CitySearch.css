@@ -1,0 +1,92 @@
+/*
+ * CitySearch island styles — reference only tokens.css variables (SSOT), never
+ * raw hex. Global classes (not scoped like .astro) so they're prefixed
+ * `city-search` to avoid collisions.
+ */
+.city-search {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  font-family: var(--sans);
+}
+
+.city-search__input {
+  width: 100%;
+  padding: 10px 14px;
+  font-family: var(--sans);
+  font-size: 15px;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--axis);
+  border-radius: 8px;
+  outline: none;
+}
+
+.city-search__input::placeholder {
+  color: var(--muted-dim);
+}
+
+.city-search__input:focus {
+  border-color: var(--accent);
+}
+
+.city-search__listbox {
+  position: absolute;
+  z-index: 10;
+  left: 0;
+  right: 0;
+  margin: 6px 0 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--bg);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.city-search__option {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.city-search__option[aria-selected='true'] {
+  background: var(--hairline);
+}
+
+.city-search__option-alt {
+  color: var(--muted);
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+.city-search__empty {
+  margin: 6px 0 0;
+  padding: 10px 12px;
+  color: var(--muted);
+  font-size: 14px;
+  background: var(--bg);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+}
+
+.city-search__locate {
+  margin-top: 8px;
+  padding: 6px 10px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--axis);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.city-search__locate:hover {
+  border-color: var(--accent);
+}
