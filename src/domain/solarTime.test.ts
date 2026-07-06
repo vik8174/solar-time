@@ -161,6 +161,44 @@ describe('computeDeviation', () => {
     expect(result.solarNoon).toBeLessThan(930); // before 15:30
   });
 
+  // Antimeridian cities: West longitude but East UTC (+12/+13/+14) — they sit
+  // just across the date line, so the raw longitude offset overflows by a full
+  // day (1440 min). Solar time is cyclic; the deviation must wrap into range.
+  it.each([
+    // Raw offset ≈ +1481 min wraps down a full day to +40.8; likewise the others.
+    {
+      name: "Nuku'alofa",
+      longitude: -175.2,
+      timeZone: 'Pacific/Tongatapu',
+      expectedLongitudeOffset: 40.8,
+    },
+    { name: 'Apia', longitude: -171.77, timeZone: 'Pacific/Apia', expectedLongitudeOffset: 27.08 },
+    {
+      name: 'Mata-Utu',
+      longitude: -176.17,
+      timeZone: 'Pacific/Wallis',
+      expectedLongitudeOffset: -15.32,
+    },
+  ])(
+    'wraps $name across the date line to its true small deviation',
+    ({ longitude, timeZone, expectedLongitudeOffset }) => {
+      const result = computeDeviation({ longitude, timeZone, date: utcNoon(2026, 1, 15) });
+
+      // The wrapped longitude component is pinned to its true value — a full-day
+      // (1440 min) overflow or a wrong wrap branch would miss this by ~1440.
+      expect(result.longitudeOffset).toBeCloseTo(expectedLongitudeOffset, 2);
+      // The marker no longer overflows the axis: WIDEST (720) suffices.
+      expect(Math.abs(result.total)).toBeLessThan(720);
+      // D-004 additive invariant survives the wrap (only one addend changed value).
+      expect(result.longitudeOffset + result.equationOfTime + result.dst).toBeCloseTo(
+        result.total,
+        6,
+      );
+      // Solar noon stays anchored to the wrapped total.
+      expect(result.solarNoon).toBeCloseTo(SOLAR_NOON_IDEAL + result.total, 6);
+    },
+  );
+
   it('is in sync on the standard meridian with no DST and near-zero EoT', () => {
     // 0°E in UTC+0 Iceland (no DST), mid-April EoT ≈ 0 → clock matches the sun.
     const result = computeDeviation({

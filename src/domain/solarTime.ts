@@ -10,6 +10,23 @@
 
 const MINUTES_PER_DEGREE = 4; // Earth turns 15°/hour → 4 min per degree of longitude.
 const SOLAR_NOON_IDEAL_MINUTES = 720; // 12:00, minutes from local midnight.
+const MINUTES_PER_DAY = 1440; // One full rotation; solar time is cyclic over it.
+const HALF_DAY_MINUTES = 720; // Half a day — the principal-range bound.
+
+/**
+ * Wrap a cyclic minute quantity into the principal range [−720, +720).
+ *
+ * Solar time is cyclic over a day, so a longitude offset of +1481 min (a city
+ * just across the antimeridian: West longitude on an East UTC zone) is the same
+ * clock-vs-sun angle as +41 min — one full day (1440 min) apart. Normalizing
+ * keeps the deviation physically meaningful and on the axis.
+ *
+ * @param minutes - A signed minute quantity to normalize.
+ * @returns Equivalent minutes in [−720, +720); a no-op for values already in range.
+ */
+const wrapMinutes = (minutes: number): number =>
+  ((((minutes + HALF_DAY_MINUTES) % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY) -
+  HALF_DAY_MINUTES;
 
 /** Location and instant to evaluate the clock-vs-sun deviation for. */
 export interface DeviationInput {
@@ -135,7 +152,9 @@ export const dstMinutes = (timeZone: string, date: Date): number =>
  */
 export const computeDeviation = ({ longitude, timeZone, date }: DeviationInput): Deviation => {
   const standardOffset = standardOffsetMinutes(timeZone, date);
-  const longitudeOffset = longitudeOffsetMinutes(longitude, standardOffset);
+  // Wrap the cyclic longitude component so antimeridian cities (West longitude on
+  // an East UTC zone) don't overflow by a full day; a no-op for in-range cities.
+  const longitudeOffset = wrapMinutes(longitudeOffsetMinutes(longitude, standardOffset));
   // Negate the classic (apparent − mean) EoT so a sundial running fast moves the
   // clock's lead over the sun in the same direction as the other components.
   const equationOfTime = -equationOfTimeMinutes(date);
