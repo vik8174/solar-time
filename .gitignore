@@ -11,7 +11,10 @@ firebase-debug.log*
 coverage/
 
 # dependencies
-node_modules/
+# No trailing slash: also ignores the `node_modules` *symlink* that
+# scripts/ticket-worktree.sh creates in per-ticket worktrees (a symlink is a
+# file, so a `node_modules/` dir-only pattern would leave it untracked).
+node_modules
 
 # logs
 npm-debug.log*
