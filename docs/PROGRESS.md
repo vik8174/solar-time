@@ -6,6 +6,38 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Slice #7 — Live geolocation mode on `/`
+
+- **Date:** 2026-07-06
+- **PR:** #47 (merged) · **Issue:** #7 (closed)
+- **What:** Turned the `/` placeholder into the **live, per-visitor solar-time mode**. First
+  paint is a real result (SSG bakes a neutral global default — largest city); the island
+  recomputes it for _today_ (D-013 inline pattern) and upgrades to the visitor's **timezone
+  estimate** via `/tz-index.json` + the new `/geo-index.json`. **📍 my location** → precise
+  Geolocation fix: deviation computed from the **exact longitude + browser timezone** (no city
+  lookup for the number); `findNearestCity` only supplies the **"Your location / near {city}"**
+  label, hidden when the nearest city is **>100 km** away.
+- **Graceful everywhere:** denied → 📍 becomes a **search hint**, not a dead button (Permissions
+  pre-check); ~9 s timeout / unavailable → default stays with a quiet note; no `Intl`/`Geolocation`
+  → the SSG snapshot stays. `/` remains **noindex** (D-005).
+- **Architecture:** Geolocation is the I/O boundary — the pure state machine `geoReducer`
+  (`idle→locating→located/denied/error/unsupported`) drives the UI; the `.astro` `<script>` is a
+  thin adapter/DOM shell. Pure `src/lib` modules (all tested, under the D-012 gate): `geoReducer`,
+  `findNearestCity` (haversine), `homeView` (label + status copy), `geoIndex` (projection), and
+  the thin `geolocation` adapter (mocked at the boundary). New lean **`/geo-index.json`** =
+  `{ slug, name, lat, lon }` — see **ADR D-017**.
+- **SSOT preserved (R-001):** every compute path goes through `computeDeviation` →
+  `buildCityViewModel`, same as the city pages. Registry never enters the JS bundle (home island
+  ≈ 4 KB; verified no city names in `dist/**/*.js` — D-013 holds).
+- **Verify:** typecheck / lint / format:check / test:coverage / build all green. **179 tests,
+  coverage 100 / 98.66 / 100 / 100** on `src/lib` + `src/domain`; build 1086 pages.
+- **Review:** `qa` agent added 28 edge-case tests (poles, antimeridian, threshold boundaries,
+  reducer transitions, error-code mapping). `code-reviewer` flagged a race (fast 📍 fix
+  clobbered by the slower timezone estimate) + an empty-eyebrow gap — **both fixed** before
+  merge; fetched-JSON shape guard hardened. Known suggestion-level edge (not fixed): a
+  cached-permission 📍 resolving before `/geo-index.json` loads shows "Your location" without
+  "near {city}" for that one click (valid fallback).
+
 ## Fix #42 — Breakdown rows reconcile with the displayed total
 
 - **Date:** 2026-07-06
