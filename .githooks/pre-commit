@@ -1,0 +1,33 @@
+#!/bin/sh
+# Guardrail (R-008): enforce per-ticket worktree isolation.
+#
+# Hard-blocks a commit when:
+#   1. the current branch is `main` or `stage` (direct commits to protected
+#      branches are forbidden), or
+#   2. the commit is happening in the PRIMARY clone rather than a linked
+#      git worktree.
+#
+# Detection: in a linked worktree `git rev-parse --absolute-git-dir` points at
+# `.git/worktrees/<name>`, which differs from the resolved `--git-common-dir`
+# (the shared `.git`); in the primary clone the two resolve to the same path.
+#
+# `git commit --no-verify` remains an accepted escape hatch — CI is the backstop.
+
+branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+case "$branch" in
+main | stage)
+	echo "[pre-commit] Direct commit to '$branch' is forbidden — use a feature branch in a worktree (R-008)." >&2
+	echo "[pre-commit] Paved path: scripts/ticket-worktree.sh <branch-name>" >&2
+	exit 1
+	;;
+esac
+
+git_dir=$(cd "$(git rev-parse --absolute-git-dir)" && pwd)
+common_dir=$(cd "$(git rev-parse --git-common-dir)" && pwd)
+if [ "$git_dir" = "$common_dir" ]; then
+	echo "[pre-commit] Committing in the PRIMARY clone. Each ticket must run in its own git worktree (R-008)." >&2
+	echo "[pre-commit] Paved path: scripts/ticket-worktree.sh <branch-name>" >&2
+	exit 1
+fi
+
+exit 0
