@@ -13,7 +13,7 @@
  * because satori cannot read CSS custom properties; `tokens.css` stays the SSOT
  * for the live UI.
  *
- * @see ADR D-018 (OG generation).
+ * @see ADR D-019 (OG generation).
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

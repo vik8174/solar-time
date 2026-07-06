@@ -1,5 +1,5 @@
 /**
- * /robots.txt — environment-driven crawl policy (ADR D-019).
+ * /robots.txt — environment-driven crawl policy (ADR D-020).
  *
  * Replaces the old static `public/robots.txt` (which was `Disallow: /` for
  * every target). Stage stays fully disallowed; prod is crawlable and points at
