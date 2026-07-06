@@ -1,26 +1,299 @@
 ---
 /**
- * Placeholder landing page.
+ * Home (`/`) — the live, per-visitor solar-time mode (slice #7).
  *
- * Trivial page for the skeleton slice — proves the full delivery pipeline
- * (build → CI → Firebase preview/stage deploy) before real UI lands. Carries
- * noindex until the live geo mode (slice #7) replaces it; it reuses `Base` so
- * the site-wide search is present here too.
+ * Server-renders a neutral global default (the largest city) so the first paint
+ * is a real, non-blank result. A client island then, in order: (1) recomputes
+ * that default for *today* from inlined `data-*` inputs (D-013 pattern — no
+ * network, the guaranteed old-browser fallback); (2) upgrades it to the
+ * visitor's timezone estimate via the lean `/tz-index.json` + `/geo-index.json`;
+ * (3) on "📍" refines to an exact fix via the Geolocation API, labelled
+ * "Your location / near {city}". All compute goes through the same
+ * `computeDeviation` → `buildCityViewModel` SSOT as the city pages (R-001).
+ *
+ * `/` stays noindex (D-005): it is per-visitor, not a stable URL.
  */
+import Breakdown from '../components/Breakdown.astro';
+import HeroNumber from '../components/HeroNumber.astro';
+import SolarScale from '../components/SolarScale.astro';
+import { CITIES } from '../data/cities';
+import { computeDeviation } from '../domain/solarTime';
 import Base from '../layouts/Base.astro';
+import { buildCityViewModel } from '../lib/cityViewModel';
+
+// Neutral global default for first paint: the most populous city. Deterministic
+// (population desc, slug tie-break) and immediately replaced client-side by the
+// visitor's timezone estimate, so the exact choice only matters with JS off.
+const neutral = [...CITIES].sort(
+  (a, b) => b.population - a.population || (a.slug < b.slug ? -1 : 1),
+)[0];
+if (!neutral) throw new Error('city registry is empty — cannot render the home default');
+
+const deviation = computeDeviation({
+  longitude: neutral.longitude,
+  timeZone: neutral.timeZone,
+  date: new Date(),
+});
+const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, deviation);
 ---
 
-<Base title="Solar Time — coming soon" noindex>
-  <main class="home">
-    <h1>Solar Time</h1>
-    <p>How far your clock drifts from the sun. Search a city to see its deviation.</p>
-  </main>
-</Base>
+<Base title="Solar Time — how far your clock is from the sun" noindex>
+  <main class="page" data-home-longitude={neutral.longitude} data-home-timezone={neutral.timeZone}>
+    <div class="content">
+      <p class="eyebrow">
+        <span data-eyebrow-primary>{vm.cityName}</span>
+        <span class="eyebrow-note" data-eyebrow-note>Estimated for your region</span>
+      </p>
 
-<style>
-  .home {
-    max-width: 480px;
-    margin: 0 auto;
-    padding: 40px 20px;
-  }
-</style>
+      <HeroNumber
+        heroValue={vm.heroValue}
+        showUnit={vm.showUnit}
+        leadText={vm.leadText}
+        solarNoonText={vm.solarNoonText}
+      />
+
+      <SolarScale geometry={vm.geometry} solarNoonLabel={vm.solarNoonLabel} />
+
+      <Breakdown rows={vm.breakdown} />
+
+      <div class="geo">
+        <button type="button" class="geo-button" data-geo-button>📍 Use my location</button>
+        <p class="geo-hint" data-geo-hint hidden></p>
+        <p class="geo-note">Calculated in your browser — your location never leaves it.</p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    import { computeDeviation } from '../domain/solarTime';
+    import { buildCityViewModel } from '../lib/cityViewModel';
+    import { findNearestCity } from '../lib/findNearestCity';
+    import type { GeoCity } from '../lib/geoIndex';
+    import {
+      checkPermission,
+      DEFAULT_TIMEOUT_MS,
+      getCurrentPosition,
+      GeolocationError,
+    } from '../lib/geolocation';
+    import { geoReducer, initialGeoState, type GeoEvent, type GeoState } from '../lib/geoReducer';
+    import { geoStatusHint, locatedLabel } from '../lib/homeView';
+    import { resolveDefaultCity, type ZoneCity } from '../lib/resolveDefaultCity';
+    import { scaleInnerSvg } from '../lib/scaleSvg';
+
+    const root = document.querySelector<HTMLElement>('[data-home-longitude]');
+    const button = document.querySelector<HTMLButtonElement>('[data-geo-button]');
+    const hint = document.querySelector<HTMLElement>('[data-geo-hint]');
+
+    if (root && button && hint) {
+      const browserTimeZone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone;
+      let geoIndex: readonly GeoCity[] | null = null;
+      let state: GeoState = initialGeoState;
+
+      const setText = (selector: string, text: string): void => {
+        const el = document.querySelector(selector);
+        if (el) el.textContent = text;
+      };
+
+      // Paints a view model into the hero / scale / breakdown — the R-001 render
+      // glue, twin of the recompute in [city].astro (same SSOT compute path).
+      const paint = (model: ReturnType<typeof buildCityViewModel>): void => {
+        setText('[data-hero-value]', model.heroValue);
+        setText('[data-lead]', model.leadText);
+        setText('[data-solar-noon]', model.solarNoonText);
+        setText('[data-scale-noon]', model.solarNoonLabel);
+        const unit = document.querySelector<HTMLElement>('[data-hero-unit]');
+        if (unit) unit.hidden = !model.showUnit;
+        document.querySelector('.hero')?.classList.toggle('synced', model.inSync);
+        const scale = document.querySelector('[data-scale]');
+        if (scale) scale.innerHTML = scaleInnerSvg(model.geometry);
+        for (const r of model.breakdown) {
+          setText(`[data-row-value="${r.key}"]`, r.value);
+          document.querySelector(`[data-row="${r.key}"]`)?.classList.toggle('zero', r.zero);
+        }
+      };
+
+      const setEyebrow = (primary: string, note: string): void => {
+        setText('[data-eyebrow-primary]', primary);
+        const noteEl = document.querySelector<HTMLElement>('[data-eyebrow-note]');
+        if (noteEl) {
+          noteEl.textContent = note;
+          // Hide the line entirely when empty, so it reserves no vertical space.
+          noteEl.hidden = note === '';
+        }
+      };
+
+      // Computes + paints the deviation for a longitude in a time zone.
+      const render = (longitude: number, timeZone: string): void => {
+        paint(
+          buildCityViewModel(
+            { name: '', coords: '' },
+            computeDeviation({ longitude, timeZone, date: new Date() }),
+          ),
+        );
+      };
+
+      // Reflects the reducer state onto the button + hint (never the result).
+      const renderControls = (): void => {
+        const message = geoStatusHint(state.status);
+        hint.hidden = message === null;
+        if (message !== null) hint.textContent = message;
+        // Denied / unsupported turn 📍 into the hint (not a dead button).
+        button.hidden = state.status === 'denied' || state.status === 'unsupported';
+        button.disabled = state.status === 'locating';
+        button.textContent = state.status === 'locating' ? '📍 Locating…' : '📍 Use my location';
+      };
+
+      const dispatch = (event: GeoEvent): void => {
+        state = geoReducer(state, event);
+        renderControls();
+      };
+
+      // 1. Recompute the baked default for *today* — the guaranteed path that
+      // needs no network and no Geolocation; if it throws (e.g. no Intl), the
+      // server-rendered snapshot simply stays.
+      const longitude = Number(root.dataset.homeLongitude);
+      const timeZone = root.dataset.homeTimezone;
+      try {
+        if (timeZone && !Number.isNaN(longitude)) render(longitude, timeZone);
+      } catch (error) {
+        console.warn('home: default recompute failed', error);
+      }
+
+      // Old browser without Geolocation → mark unsupported (hides 📍, shows hint).
+      if (!('geolocation' in navigator)) dispatch({ type: 'UNSUPPORTED' });
+
+      const fetchJson = async (url: string): Promise<unknown> => {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`${url} → ${String(response.status)}`);
+        return response.json();
+      };
+
+      // 2. Upgrade to the visitor's timezone estimate + prime the geo index.
+      void (async (): Promise<void> => {
+        try {
+          const [tzData, geoData] = await Promise.all([
+            fetchJson('/tz-index.json'),
+            fetchJson('/geo-index.json'),
+          ]);
+          // Trusted first-party build artifacts (see the *.json.ts endpoints);
+          // guard the shape so a future endpoint change fails loudly, not silently.
+          if (!Array.isArray(tzData) || !Array.isArray(geoData)) {
+            throw new Error('home: index payload is not an array');
+          }
+          const zones = tzData as ZoneCity[];
+          // Always prime the geo index — the 📍 label needs it even if the user
+          // has already moved past the timezone estimate below.
+          geoIndex = geoData as GeoCity[];
+          // Only paint the estimate while still idle: a 📍 fix (or a pre-check
+          // denial) that resolved first must not be clobbered by this slower,
+          // lower-priority default. The reducer state is the priority guard.
+          if (state.status === 'idle' && zones.length > 0) {
+            const largest = zones.reduce((a, b) => (b.population > a.population ? b : a));
+            const picked = resolveDefaultCity(browserTimeZone(), zones, largest);
+            const entry = geoIndex.find((g) => g.slug === picked.slug);
+            if (entry) {
+              render(entry.lon, picked.timeZone);
+              setEyebrow(entry.name, 'Estimated from your time zone');
+            }
+          }
+        } catch (error) {
+          console.warn('home: timezone estimate failed', error);
+        }
+        // Permissions pre-check: a pre-blocked visitor sees the search hint, not
+        // a button that silently does nothing.
+        if (state.status === 'idle' && (await checkPermission()) === 'denied') {
+          dispatch({ type: 'DENIED' });
+        }
+      })();
+
+      // 3. 📍 → exact fix from precise coordinates (no city needed for the number).
+      const dispatchForError = (error: unknown): void => {
+        const kind = error instanceof GeolocationError ? error.kind : 'unavailable';
+        if (kind === 'denied') dispatch({ type: 'DENIED' });
+        else if (kind === 'timeout') dispatch({ type: 'TIMEOUT' });
+        else if (kind === 'unsupported') dispatch({ type: 'UNSUPPORTED' });
+        else dispatch({ type: 'UNAVAILABLE' });
+      };
+
+      button.addEventListener('click', () => {
+        dispatch({ type: 'REQUEST' });
+        void getCurrentPosition({ timeoutMs: DEFAULT_TIMEOUT_MS })
+          .then(({ lat, lon }) => {
+            render(lon, browserTimeZone());
+            const nearest = geoIndex ? findNearestCity(lat, lon, geoIndex) : null;
+            const label = locatedLabel(nearest);
+            setEyebrow(label.primary, label.near ?? '');
+            dispatch({ type: 'SUCCESS', coords: { lat, lon } });
+          })
+          .catch(dispatchForError);
+      });
+    }
+  </script>
+
+  <style>
+    .page {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 20px;
+    }
+    .content {
+      width: 100%;
+      max-width: 480px;
+    }
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: center;
+      margin: 0 0 24px;
+    }
+    .eyebrow-note {
+      display: block;
+      margin-top: 4px;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: var(--muted-dim);
+    }
+    .geo {
+      margin: 36px auto 0;
+      text-align: center;
+    }
+    .geo-button {
+      font-family: var(--mono);
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      color: var(--text);
+      background: transparent;
+      border: 1px solid var(--axis);
+      border-radius: 999px;
+      padding: 9px 18px;
+      cursor: pointer;
+      transition:
+        border-color 0.2s,
+        color 0.2s;
+    }
+    .geo-button:hover:not(:disabled) {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .geo-button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    .geo-hint {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--muted);
+      max-width: 36ch;
+      margin: 0 auto;
+    }
+    .geo-note {
+      font-size: 11px;
+      color: var(--muted-dim);
+      margin: 12px auto 0;
+    }
+  </style>
+</Base>
