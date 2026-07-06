@@ -6,6 +6,34 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Slice #9 — SEO + OG share cards
+
+- **Date:** 2026-07-06
+- **PR:** #54 (merged) · **Issue:** #9 (closed)
+- **What:** Every `/[city]` becomes a real search + share target — unique metadata, a build-time
+  Open Graph card, and an environment-aware crawl policy.
+- **Per-page metadata:** `Base.astro` emits `<meta name="description">`, `<link rel="canonical">`,
+  and full Open Graph + Twitter Card tags, absolutized against `site`. Driven by a pure, tested
+  `seoMeta(city, deviation)` (`src/lib`, under the D-012 gate). Title is evergreen
+  (`Solar time in {City}`); the description carries the build-date number (D-003 snapshot).
+- **Build-time OG cards (ADR D-019):** one 1200×630 PNG per city (deviation number + name) via
+  `satori` → `@resvg/resvg-js` from the endpoint `/og/[slug].png`; pure `ogCardModel` feeds the
+  layout, and the number flows through the same `format.ts` helpers as `cityViewModel` (SSOT,
+  R-001 — never recomputed). Home gets a branded `/og/home.png`. A per-city render failure
+  degrades to the brand card; a systemic failure still fails the build (fail-fast).
+- **Environment split (ADR D-020):** `SITE_ENV=prod` (in `deploy:prod`) read once in
+  `src/config/site.ts`, driving the `site` URL, sitemap gating, robots, and per-page `noindex`.
+  robots.txt is now an endpoint (stage `Disallow: /`, prod `Allow: /` + `Sitemap:`), replacing
+  the old static `public/robots.txt`. Sitemap (`@astrojs/sitemap`, prod-only) lists 1085 city
+  URLs, excludes `/` (noindex, D-005) and endpoints; `trailingSlash: 'never'` matches the
+  canonical URLs + firebase `cleanUrls`. City pages: noindex on stage, indexable on prod.
+- **Verify:** typecheck / lint / format / **test:coverage (224 tests, 100 / 97.9 / 100 / 100)**
+  green. Full stage + prod builds validated end-to-end (robots, sitemap 1085 urls, noindex/
+  indexable per env, absolute canonical + OG/Twitter, valid 1200×630 PNGs — Prague + home checked).
+  `code-reviewer` → PASS WITH NOTES (both ≥75 fixed); `qa` → +24 edge tests.
+- **Cost:** OG generation adds ~130 s to the CI-only `build` (~1085 imgs / ~24 MB); every build
+  regenerates cards (date-dependent number → no valid cross-build cache). See R-010.
+
 ## Fix #50 — Wrap longitude offset across the antimeridian
 
 - **Date:** 2026-07-06

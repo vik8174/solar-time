@@ -73,3 +73,21 @@ the site must visibly credit GeoNames. No footer exists yet, so the attribution 
 currently absent from the rendered pages (noted only in `cities.ts`/`buildCities.ts`
 source headers). **Action:** add the GeoNames credit when the footer lands (slice #11);
 must be in place before the repo goes public / release (R-007).
+
+## R-010 — OG generation build time · accepted
+
+Slice #9 (D-019) regenerates ~1085 OG PNGs on every build, adding **~130 s** (~24 MB output,
+~22 KB each). It runs **CI-only** (not in the local `pre-push` loop), so day-to-day dev is
+unaffected. Cross-build caching is **not valid** — each card embeds the build-date deviation
+number (D-003), so a cached image would go stale. **Accepted** for now as a CI-only cost.
+**Watch:** if CI time or the city count grows painful, options are incremental/changed-only
+regeneration, moving OG to a separate job, or dropping to on-demand generation.
+
+## R-011 — OG font glyph coverage · open
+
+The OG card renders the city name with bundled **JetBrains Mono** (D-019). The current dataset is
+Latin-script, but the registry can grow to include **non-Latin city names** (Cyrillic, CJK, Arabic,
+…) whose glyphs the bundled font lacks — satori would render tofu/blanks rather than the name.
+**Mitigation in place:** a render failure degrades to the branded card (no broken build).
+**Action:** when a non-Latin name enters the dataset, either add a broad-coverage fallback font to
+the satori pipeline or keep the deliberate brand-card fallback for uncovered names.

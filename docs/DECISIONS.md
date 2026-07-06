@@ -202,3 +202,32 @@ domain tests are unchanged; **no `scaleWindow`/UI change** (WIDEST 720 now alway
 domain, not the scale, was the bug). **Assumption:** ±720 min is the correct principal range for a
 clock-vs-sun deviation; any real value outside it indicates a date-line artifact, not a real
 offset. Found by the slice #8 verification scan. Adopted with fix #50 (PR #52 / issue #50).
+
+## D-019 — Build-time OG cards via satori + resvg · accepted
+
+Share previews need a 1200×630 image per city (deviation number + name). **Decision:** generate
+them **at build time**, not runtime — `satori@0.26.0` renders a programmatic card (JSX + the
+`tokens.css` palette, D-006) to SVG, then `@resvg/resvg-js@2.6.2` rasterizes to PNG, exposed as
+the endpoint `/og/[slug].png` (home = `/og/home.png`). The card's number flows through the same
+`format.ts` helpers as `cityViewModel`, so it is the **SSOT number** (R-001), never recomputed.
+A pure `ogCardModel(cityName, deviation)` holds the layout (tested under D-012). Font: **JetBrains
+Mono (OFL)** bundled — satori needs the font bytes, no system fallback at build. **No Nano Banana**
+— per-city cards are programmatic; the design tool stays for the separate mood/hero raster (D-007).
+**Failure policy:** a single per-city render failure degrades to the branded card; a systemic
+failure fails the build (fail-fast). **Trade-off:** ~130 s added to the CI build and no valid
+cross-build caching (see R-010); accepted as CI-only cost. Adopted with slice #9 (PR #54 / issue #9).
+
+## D-020 — Environment-based stage/prod split (`SITE_ENV`) · accepted
+
+The site had no way to differ between stage and prod — `build` was identical and
+`public/robots.txt` (a static `Disallow: /`) would have shipped to prod too. **Decision:** a single
+build-time flag **`SITE_ENV=prod`** (set in `deploy:prod`; unset = stage) is read once in
+`src/config/site.ts` and drives everything env-dependent: the `site` URL, per-page `noindex`, the
+robots endpoint, and sitemap gating. **robots** is now a generated endpoint — stage `Disallow: /`,
+prod `Allow: /` + `Sitemap:` (replaces the static file). **sitemap** (`@astrojs/sitemap@3.7.3`,
+prod-gated) lists the 1085 city URLs, excludes `/` (noindex, D-005) and all endpoints;
+`trailingSlash: 'never'` keeps sitemap/canonical URLs aligned with firebase `cleanUrls`
+(D-002 / firebase.json). **`site` = `https://solar-time-prod.web.app`** (Firebase default; a
+custom domain is a one-line change before prod is ever indexed — R-006). **Invariant:** `/` is
+always noindex; city pages are noindex on stage, indexable on prod. Adopted with slice #9
+(PR #54 / issue #9).
