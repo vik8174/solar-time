@@ -66,6 +66,11 @@ const meta = seoMeta({ name: city.name, slug: city.slug }, deviation);
       <SolarScale geometry={vm.geometry} solarNoonLabel={vm.solarNoonLabel} />
 
       <Breakdown rows={vm.breakdown} />
+
+      <div class="share">
+        <button type="button" class="share-button" data-share-button hidden>Share</button>
+        <span class="share-status" data-share-status role="status" aria-live="polite"></span>
+      </div>
     </div>
   </main>
 
@@ -123,6 +128,77 @@ const meta = seoMeta({ name: city.name, slug: city.slug }, deviation);
     }
   </script>
 
+  <script>
+    import { buildShareUrl, pickShareStrategy } from '../lib/share';
+
+    /**
+     * Share adapter (D-001) — a thin wrapper around the pure `pickShareStrategy`
+     * / `buildShareUrl` (D-012). Feature-detects the Web Share and Clipboard
+     * APIs (never UA-sniffs), then either opens the OS share sheet or copies the
+     * clean city URL with a brief "Link copied" confirmation. When neither API
+     * exists the button stays hidden — never a dead end.
+     *
+     * Re-binds on `astro:page-load` because `<main>` is swapped (not persisted)
+     * on every View-Transition navigation between city pages, so the fresh
+     * button needs the listener re-attached — twin of the support-dismiss adapter.
+     */
+    const CONFIRM_MS = 2000;
+
+    const initShare = (): void => {
+      const root = document.querySelector<HTMLElement>('[data-city-slug]');
+      const button = document.querySelector<HTMLButtonElement>('[data-share-button]');
+      const status = document.querySelector<HTMLElement>('[data-share-status]');
+      const slug = root?.dataset.citySlug;
+      if (!button || !status || slug === undefined) return;
+
+      const strategy = pickShareStrategy({
+        canShare: typeof navigator.share === 'function',
+        canClipboard: typeof navigator.clipboard?.writeText === 'function',
+      });
+
+      // No usable API → leave the button hidden (graceful degradation).
+      if (strategy === 'none') return;
+
+      const url = buildShareUrl(slug, window.location.origin);
+      button.textContent = strategy === 'native' ? 'Share' : 'Copy link';
+      button.hidden = false;
+
+      let confirmTimer: ReturnType<typeof setTimeout> | undefined;
+      const flash = (message: string): void => {
+        status.textContent = message;
+        if (confirmTimer !== undefined) clearTimeout(confirmTimer);
+        confirmTimer = setTimeout(() => {
+          status.textContent = '';
+        }, CONFIRM_MS);
+      };
+
+      const copyLink = (): void => {
+        void navigator.clipboard.writeText(url).then(
+          () => flash('Link copied'),
+          (error: unknown) => {
+            // A real clipboard failure — surface it visibly and log it.
+            console.warn('share: clipboard write failed', error);
+            flash('Copy failed');
+          },
+        );
+      };
+
+      button.addEventListener('click', () => {
+        if (strategy === 'native') {
+          void navigator.share({ title: document.title, url }).catch((error: unknown) => {
+            // User cancelled the OS sheet — swallow that one case intentionally.
+            if (error instanceof DOMException && error.name === 'AbortError') return;
+            console.warn('share: native share failed', error);
+          });
+        } else {
+          copyLink();
+        }
+      });
+    };
+
+    document.addEventListener('astro:page-load', initShare);
+  </script>
+
   <style>
     .page {
       display: flex;
@@ -142,6 +218,37 @@ const meta = seoMeta({ name: city.name, slug: city.slug }, deviation);
       color: var(--muted);
       text-align: center;
       margin: 0 0 24px;
+    }
+    .share {
+      margin: 36px auto 0;
+      text-align: center;
+    }
+    .share-button {
+      font-family: var(--mono);
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      color: var(--text);
+      background: transparent;
+      border: 1px solid var(--axis);
+      border-radius: 999px;
+      padding: 9px 18px;
+      cursor: pointer;
+      transition:
+        border-color 0.2s,
+        color 0.2s;
+    }
+    .share-button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .share-status {
+      display: block;
+      margin-top: 12px;
+      min-height: 1em;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      color: var(--muted);
     }
   </style>
 </Base>
