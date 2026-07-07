@@ -6,6 +6,27 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix #68 — GA4 truly cookieless via Consent Mode
+
+- **Date:** 2026-07-07
+- **PR:** #68 (merged) · follow-up to slice #10 (analytics)
+- **What:** Fixed a **privacy defect** found while verifying slice #10 in-browser with live keys:
+  the site still set `_ga` / `_ga_<id>` cookies, violating the "zero cookies" acceptance
+  criterion (PRD story 29). Corrects the mechanism recorded in **ADR D-022**.
+- **Root cause:** the cookieless design relied on gtag `client_storage: 'none'` — but **GA4
+  ignores it** and writes `_ga` cookies anyway. `client_storage` is not the GA4 cookieless switch.
+- **Fix:** switch to **GA4 Consent Mode** — call Firebase `setConsent({ analytics_storage:
+'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' })`
+  **before** `initializeAnalytics`, so it lands as the `consent default` ahead of the first config
+  command. GA4 then writes **no cookies** and sends anonymous cookieless pings. Dropped the
+  ineffective `client_storage: 'none'`.
+- **Verified in-browser (live stage keys):** `document.cookie` went from `_ga=…; _ga_…` (2
+  cookies) to `""` (zero); `page_view` **still sent** — the collect ping carries `gcs=G100` /
+  `npa=1` (cookieless-mode signature). Firebase Installations still uses IndexedDB (not a cookie).
+  SDKs still load lazily after idle.
+- **Scope:** only `src/scripts/deferredInit.ts` (browser orchestrator); no `src/lib` logic changed
+  → 280 unit tests still pass, 100% lib coverage. typecheck / lint / format green.
+
 ## Chore — Prod env-key delivery (`.env.prod` + dotenv-cli)
 
 - **Date:** 2026-07-07

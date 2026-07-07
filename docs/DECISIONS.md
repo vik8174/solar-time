@@ -264,6 +264,14 @@ run green without real keys and the feature ships dormant until keys are provisi
 (`scrubEvent`, `idleScheduler`, event bus/buffer) carry the guarantees under the D-012 gate; the
 SDKs stay true-external adapters. Adopted with slice #10 (PR #61 / issue #10).
 
+**Correction (2026-07-07, PR #68):** the "cookieless" mechanism above was implemented as gtag
+`client_storage: 'none'`, but **GA4 ignores that flag and still writes `_ga` cookies** — the
+decision (cookieless) stands, the mechanism was wrong. Actual cookieless is achieved via **GA4
+Consent Mode**: `setConsent({ analytics_storage: 'denied', ad_storage: 'denied', ad_user_data:
+'denied', ad_personalization: 'denied' })` **before** `initializeAnalytics`, so GA4 writes no
+cookies and sends cookieless pings (verified in-browser: `document.cookie === ''`). The ineffective
+`client_storage: 'none'` was dropped.
+
 ## D-023 — Prod env keys via `.env.prod` + dotenv-cli (not Vite mode) · accepted
 
 Analytics keys (D-022) differ per environment, but the stage/prod split is driven by `SITE_ENV`
