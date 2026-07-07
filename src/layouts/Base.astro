@@ -14,7 +14,7 @@
 import { ClientRouter } from 'astro:transitions';
 
 import CitySearch from '../components/CitySearch.tsx';
-import { FEEDBACK_URL, GEONAMES_URL, GITHUB_URL, SUPPORT_URL } from '../config/links';
+import { FEEDBACK_URL, GEONAMES_URL, SUPPORT_URL } from '../config/links';
 import '../styles/tokens.css';
 
 interface Props {
@@ -116,7 +116,6 @@ const ogImage = ogImagePath && site ? new URL(ogImagePath, site).href : undefine
         <a href="/privacy">Privacy</a>
         <a href={FEEDBACK_URL} target="_blank" rel="noopener noreferrer">Feedback</a>
         <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">Support</a>
-        <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">GitHub</a>
       </nav>
       <p class="footer-credit">
         City data © <a href={GEONAMES_URL} target="_blank" rel="noopener noreferrer">GeoNames</a> (CC
