@@ -155,3 +155,17 @@ dependency errors during a parallel dep-changing slice (what the #11 worker did)
 follow-up:** consider hardening `ticket-worktree.sh` — e.g. `npm ci` into the worktree instead of
 symlinking (or detect a lockfile/`node_modules` mismatch) when a concurrent slice touches deps.
 Acute only while two slices run in parallel and one changes `package.json`.
+
+## R-015 — Firebase preview-channel quota exhausted → every PR's preview check is red · open
+
+The `preview` job (`ci.yml:55`, `FirebaseExtended/action-hosting-deploy@v0`) creates a per-PR
+Firebase Hosting preview channel on `solar-time-stage`. Firebase caps active preview channels per
+site, and that cap is now reached: `POST …/channels → 429 "channel quota reached" RESOURCE_EXHAUSTED`.
+Channels have `expires: 7d` (`ci.yml:86`) but are **never deleted on PR close**, so within any 7-day
+window the accumulated `pr*` channels exceed the quota. Result: `Deploy Preview` + `PR preview deploy`
+fail on **every** same-repo PR (seen on #93, #76, #75, #74 — including doc-only branches that don't
+change site output, proving it's infra, not code). The required `Checks` gate is unaffected, so PRs
+stay mergeable (`UNSTABLE`) and the coordinator merges as before — but the red X is misleading and
+would mask a genuine preview regression. **Filed as issue #96.** **Fix (proposed):** auto-delete the
+channel on `pull_request: closed` + shorten `expires` to ~2d; one-time manual prune of stale `pr*`
+channels to unblock now (needs Firebase account access). Non-blocking for feature work.

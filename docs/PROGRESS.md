@@ -6,6 +6,37 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix #78 — Keep the unit on the number's baseline on the OG share card
+
+- **Date:** 2026-07-07
+- **PR:** #95 (merged) · **Issue:** #78 (closed)
+- **What:** On the OG share card the unit "min" dropped below the big number. satori's
+  `alignItems: 'baseline'` is unreliable across very different font sizes (number ~240px vs unit
+  84px), so the small unit landed too low.
+- **Fix:** control alignment explicitly in `renderOgCard.ts` — the number+unit row uses
+  `alignItems: 'flex-end'` with `lineHeight: 1` on both, and the unit gets a `paddingBottom` of
+  `k · (numberSize − unitSize)` (`unitBaselineNudge`) that cancels the descent gap so it sits on
+  the number's baseline. Holds across all `valueFontSize` branches (240/170/130).
+- **Scope:** layout-only in the `src/og` adapter (outside the D-012 gate); `ogCardModel` (pure)
+  untouched. Verified on the regenerated PNGs.
+
+## Fix #77 — Missing space before inline tags that wrap to a new line
+
+- **Date:** 2026-07-07
+- **PR:** #93 (merged) · **Issue:** #77 (closed)
+- **What:** On `/privacy` and home, words glued to a following bold/link — "a fewanonymous",
+  "arenever stored", "leaves it.Privacy". `compressHTML` (Astro default `true`) collapses the
+  whitespace between a text node and an inline element **to nothing** when the tag opens on the
+  _next_ source line; a same-line space (`any <strong>`) survives.
+- **Fix:** explicit `{' '}` separator before each of the **5** affected inline tags
+  (`privacy.astro` ×3, `index.astro`, `Base.astro`) — point fix, keeps `compressHTML`/minification
+  on (no global `compressHTML: false`). Verified in built `dist` (space present; glued forms gone).
+- **Guard:** `src/inlineTagSpacing.test.ts` scans every `.astro` for the anti-pattern (text char
+  directly against a newline-opened `<strong>`/`<a>`). Only a real `{' '}`/`{" "}` separator counts
+  as a fix — an arbitrary interpolation like `{count}` glues the same way and is still flagged.
+- **Spun off:** the red `Deploy Preview` / `PR preview deploy` checks are a pre-existing infra
+  failure (Firebase preview-channel quota), not this change — filed as R-015 / issue #96.
+
 ## Ops — Repo public + `main` branch protection (R-007, R-003)
 
 - **Date:** 2026-07-07
