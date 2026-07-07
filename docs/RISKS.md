@@ -22,11 +22,17 @@ NOAA/Spencer approximation targets < 30 s error (D-004). Acceptable for a
 "how far is your clock from the sun" tool; not for scientific use. Documented as a
 known bound, not a bug.
 
-## R-003 — Branch protection deferred · open
+## R-003 — Branch protection deferred · resolved
 
 Free + private repo rejects branch protection (classic and rulesets → 403). `main`/`stage`
 are currently unprotected — discipline is manual. **Action:** enable rulesets
 (require PR + `Checks` status + squash-only) when the repo goes public, before release.
+**Resolved (2026-07-07):** repo made public (R-007), then `main` protected — require PR
+(0 approvals, solo maintainer), required status check `Checks` (strict/up-to-date),
+`enforce_admins` on, force-push + deletion blocked; repo merge methods restricted to
+**squash-only**. `stage` left unprotected for now (no deploy gate needed there yet) — the
+release-blocking branch was `main`. **Note:** merges still go through `gh api …/merge`
+(R-004 hook), which now additionally requires green `Checks` on the PR.
 
 ## R-004 — PR merge is manually gated · accepted
 
@@ -50,10 +56,15 @@ Skeleton/stage run on `*.web.app`. Custom domain (.app or .com, ~$12/yr) deferre
 the release slice. **Action:** buy + wire DNS + Firebase custom domain at release;
 also flip repo public and add analytics keys then.
 
-## R-007 — Repo still private · open
+## R-007 — Repo still private · resolved
 
 Portfolio value needs a public repo. Kept private until release-ready. Flip to public
 at release (couples with R-003 branch protection and R-006 domain).
+**Resolved (2026-07-07):** repo flipped to **public** (`gh repo edit --visibility public`)
+after a clean history scan — real `.env`/`.env.prod` never committed (only `.env.example`),
+no real Firebase/Sentry keys in history (client `PUBLIC_*` keys are non-secret by design,
+D-008). Branch protection followed immediately (R-003). Re-adding the footer GitHub link is
+now unblocked but optional (dropped in fix #62) — separate ticket if wanted.
 
 ## R-008 — Multiple agent sessions share one working copy · mitigated
 
