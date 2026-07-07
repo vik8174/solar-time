@@ -99,7 +99,7 @@ number (D-003), so a cached image would go stale. **Accepted** for now as a CI-o
 **Watch:** if CI time or the city count grows painful, options are incremental/changed-only
 regeneration, moving OG to a separate job, or dropping to on-demand generation.
 
-## R-011 — OG font glyph coverage · open
+## R-011 — OG font glyph coverage · accepted
 
 The OG card renders the city name with bundled **JetBrains Mono** (D-019). The current dataset is
 Latin-script, but the registry can grow to include **non-Latin city names** (Cyrillic, CJK, Arabic,
@@ -107,6 +107,13 @@ Latin-script, but the registry can grow to include **non-Latin city names** (Cyr
 **Mitigation in place:** a render failure degrades to the branded card (no broken build).
 **Action:** when a non-Latin name enters the dataset, either add a broad-coverage fallback font to
 the satori pipeline or keep the deliberate brand-card fallback for uncovered names.
+**Decision (2026-07-07):** `accepted`. Verified all **1085** current city names are Latin-script
+(diacritics only — e.g. `São`, `Zürich`, `Malmö` — all covered by JetBrains Mono); **zero**
+Cyrillic/CJK/Arabic in the dataset. satori throws on an uncovered glyph, so `renderCityCard`'s
+try/catch already degrades that one city to the brand card (`renderOgCard.ts`) — the build never
+breaks and no tofu ships. Bundling broad-coverage fonts (Noto CJK/Arabic ≈ tens of MB) for names
+that don't exist would be speculative build bloat (YAGNI). **Revisit only if** a non-Latin name
+enters the registry — and even then the brand-card fallback may stay the deliberate choice.
 
 ## R-012 — Preact event model differs from React · mitigated
 
