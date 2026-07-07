@@ -13,8 +13,9 @@
  * - **Non-blocking:** both SDKs load + init only after `requestIdleCallback`.
  * - **Boot once:** `createDeferredRunner` guards against the mount script's
  *   re-execution across View-Transition navigations.
- * - **Cookieless analytics:** gtag `client_storage: 'none'` → no GA cookies;
- *   automatic page_view and ad signals are off (we emit our own events).
+ * - **Cookieless analytics:** GA4 Consent Mode `analytics_storage: 'denied'`
+ *   → no cookies, anonymous cookieless pings; automatic page_view and ad
+ *   signals are off (we emit our own events).
  * - **Error-only monitoring:** `tracesSampleRate: 0` and no tracing/replay
  *   integrations are ever imported, so none ship; `beforeSend` runs the scrub.
  * - **No event lost to the boot delay:** events emitted before the SDK is ready
@@ -47,23 +48,28 @@ const bootAnalytics = async (env: EnvRecord): Promise<EventSink | null> => {
   const config = readFirebaseConfig(env);
   if (!config) return null;
 
-  const [{ initializeApp }, { initializeAnalytics, isSupported, logEvent }] = await Promise.all([
-    import('firebase/app'),
-    import('firebase/analytics'),
-  ]);
+  const [{ initializeApp }, { initializeAnalytics, isSupported, logEvent, setConsent }] =
+    await Promise.all([import('firebase/app'), import('firebase/analytics')]);
   // Bail on browsers without the storage/APIs Analytics needs (e.g. some
   // private-mode / in-app webviews) instead of throwing (Firebase guidance).
   if (!(await isSupported())) return null;
 
+  // Cookieless via GA4 Consent Mode. With `analytics_storage: 'denied'`, GA4
+  // writes NO cookies and sends anonymous cookieless pings — this is the
+  // effective switch. (gtag `client_storage: 'none'` alone does NOT stop GA4's
+  // `_ga`/`_ga_*` cookies — verified in-browser — so it is not relied on.) Set
+  // before init so it becomes the `consent default` ahead of the first config.
+  setConsent({
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    analytics_storage: 'denied',
+  });
+
   const app = initializeApp(config);
-  // Cookieless config handed straight to gtag. `client_storage: 'none'` stops
-  // gtag persisting the client id in a cookie (→ zero cookies); we also turn off
-  // the automatic page_view (we emit our own) and all advertising signals.
-  // `client_storage` isn't a named field of Firebase's `GtagConfigParams`, but
-  // that interface has an index signature (`[key: string]: unknown`), so it
-  // type-checks and is forwarded to gtag verbatim.
+  // Suppress the automatic page_view (we emit our own) and all advertising
+  // signals — named fields of Firebase's `GtagConfigParams`.
   const gtagConfig = {
-    client_storage: 'none',
     send_page_view: false,
     allow_google_signals: false,
     allow_ad_personalization_signals: false,
