@@ -83,16 +83,30 @@ npm run build:cities
 ## Configuration
 
 Client analytics + error monitoring (ADR D-008) are configured through `PUBLIC_*`
-env vars. Copy [`.env.example`](.env.example) to `.env` and fill in per environment:
+env vars, split across two git-ignored files (copy [`.env.example`](.env.example)):
 
-| Variable                         | Service            | Notes                              |
-| :------------------------------- | :----------------- | :--------------------------------- |
-| `PUBLIC_FIREBASE_API_KEY`        | Firebase Analytics | Required to boot Analytics         |
-| `PUBLIC_FIREBASE_PROJECT_ID`     | Firebase Analytics | Required                           |
-| `PUBLIC_FIREBASE_APP_ID`         | Firebase Analytics | Required                           |
-| `PUBLIC_FIREBASE_MEASUREMENT_ID` | Firebase Analytics | Required (`G-…`)                   |
-| `PUBLIC_FIREBASE_AUTH_DOMAIN`    | Firebase Analytics | Optional                           |
-| `PUBLIC_SENTRY_DSN`              | Sentry             | Enables the error monitor when set |
+| File        | Used by                    | Firebase project   |
+| :---------- | :------------------------- | :----------------- |
+| `.env`      | local dev + `deploy:stage` | `solar-time-stage` |
+| `.env.prod` | `deploy:prod` only         | `solar-time-prod`  |
+
+| Variable                         | Service            | Notes                                            |
+| :------------------------------- | :----------------- | :----------------------------------------------- |
+| `PUBLIC_FIREBASE_API_KEY`        | Firebase Analytics | Required to boot Analytics                       |
+| `PUBLIC_FIREBASE_PROJECT_ID`     | Firebase Analytics | Required                                         |
+| `PUBLIC_FIREBASE_APP_ID`         | Firebase Analytics | Required                                         |
+| `PUBLIC_FIREBASE_MEASUREMENT_ID` | Firebase Analytics | Required (`G-…`); needs GA linked to the project |
+| `PUBLIC_FIREBASE_AUTH_DOMAIN`    | Firebase Analytics | Optional                                         |
+| `PUBLIC_SENTRY_DSN`              | Sentry             | Enables the error monitor when set               |
+
+**Why two files, not `.env` + `.env.production`:** every `astro build` runs in
+Vite's `production` mode, so a `.env.production` would be auto-loaded for the
+**stage** deploy too. The stage/prod split is driven by `SITE_ENV` instead — so
+`deploy:prod` loads `.env.prod` explicitly via `dotenv-cli`, and those values
+take precedence over the auto-loaded `.env`. `.env.prod` is a non-magic name, so
+it is never auto-loaded elsewhere. Grab a project's config with
+`firebase apps:sdkconfig WEB <appId> --project <project>`; `measurementId` only
+appears once Google Analytics is linked (console → Integrations).
 
 These are **not secrets** — Astro inlines them into the client bundle, and both
 the Firebase web config and the Sentry DSN are safe to expose. Any group left
@@ -113,8 +127,9 @@ Deploys go to Firebase Hosting. Project aliases are defined in `.firebaserc`:
 | `prod`  | `solar-time-prod`  | `npm run deploy:prod`  |
 
 Both scripts run `npm run build` first, then `firebase deploy --only hosting -P <alias>`.
-`deploy:prod` sets `SITE_ENV=prod`, which drives environment-specific behavior —
-indexing/robots/sitemap (D-020) and the Sentry `environment` tag (D-008).
+`deploy:prod` sets `SITE_ENV=prod` (which drives indexing/robots/sitemap, D-020,
+and the Sentry `environment` tag, D-008) and loads `.env.prod` via `dotenv-cli`
+so the prod Firebase/Sentry keys are used instead of the stage `.env`.
 
 > `deploy:prod` hits the **live production** project. It's a deliberate manual
 > action — there is no CI auto-deploy on merge.

@@ -20,7 +20,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "deploy:stage": "npm run build && firebase deploy --only hosting -P stage",
-    "deploy:prod": "SITE_ENV=prod npm run build && firebase deploy --only hosting -P prod"
+    "deploy:prod": "SITE_ENV=prod dotenv -e .env.prod -- npm run build && firebase deploy --only hosting -P prod"
   },
   "dependencies": {
     "@astrojs/preact": "6.0.1",
@@ -42,6 +42,7 @@
     "@types/node": "26.1.0",
     "@vitest/coverage-v8": "4.1.9",
     "astro-eslint-parser": "1.4.0",
+    "dotenv-cli": "11.0.0",
     "eslint": "10.6.0",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-astro": "1.7.0",
