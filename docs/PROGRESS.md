@@ -6,6 +6,27 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Slice #12 — Share button on city pages
+
+- **Date:** 2026-07-07
+- **PR:** #66 (merged) · **Issue:** #12 (closed)
+- **What:** A **share button on `/[city]` only** that forwards the city's clean, OG-ready URL
+  (slice #9). Personal share from `/` stays out of scope (post-MVP) — button absent on home
+  (verified in `dist`: home 0, `/prague` 1).
+- **Strategy (feature-detected, never UA-sniffed):** pure `pickShareStrategy({ canShare,
+canClipboard })` → `native | clipboard | none`. **native** — `navigator.share` opens the OS
+  sheet (its own confirmation). **clipboard** — `navigator.clipboard.writeText` + a brief
+  `aria-live` "Link copied". **none** — button renders `hidden` and JS only reveals it for a
+  usable strategy, so it's never a dead end.
+- **Clean URL:** `buildShareUrl(slug, origin)` = `new URL('/'+slug, origin).href` — no
+  query/fragment, matches the D-020 clean-URL scheme.
+- **Approach:** pure logic in `src/lib/share.ts` (D-012 gate); the `[city].astro` `<script>` is a
+  thin DOM adapter (D-001), re-bound on `astro:page-load` for View Transitions (mirrors the
+  support-dismiss adapter). No empty catch — native-share user-cancel (`AbortError`) swallowed
+  intentionally; every other failure `console.warn` + a visible message. a11y: real `<button>`,
+  `role="status"` + `aria-live="polite"`; styled via `tokens.css`.
+- **Verify:** typecheck / lint / format / test:coverage / build green. code-reviewer → PASS.
+
 ## Slice #10 — Analytics + error monitoring
 
 - **Date:** 2026-07-07
