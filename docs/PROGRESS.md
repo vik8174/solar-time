@@ -6,6 +6,25 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Chore — Prod env-key delivery (`.env.prod` + dotenv-cli)
+
+- **Date:** 2026-07-07
+- **PR:** #65 (merged) · follow-up to slice #10 (analytics)
+- **What:** Wired the two-environment key delivery so `deploy:prod` uses **prod** Firebase/Sentry
+  keys, not stage. Every `astro build` runs in Vite **production** mode, so a `.env.production`
+  would auto-load for the _stage_ deploy too — Vite mode can't separate the two (the split is
+  driven by `SITE_ENV`, not Vite mode). See **ADR D-023**.
+- **Fix:** `deploy:prod` now loads `.env.prod` explicitly via **`dotenv-cli`**
+  (`SITE_ENV=prod dotenv -e .env.prod -- npm run build && firebase deploy …`); its `PUBLIC_*`
+  values take precedence over the auto-loaded stage `.env` (verified: `projectId` resolved to
+  `solar-time-prod` under `dotenv -e .env.prod`, `solar-time-stage` on a plain build).
+  `.env.prod` is a non-magic filename → never auto-loaded elsewhere. `.gitignore` now covers
+  `.env` + `.env.*` with a `!.env.example` negation; `.env.example` + README document the split.
+- **Dep:** `dotenv-cli@11.0.0` (exact devDep). Config/docs only — no source; 273 tests still pass.
+- **Setup done:** Firebase web apps created in both projects; configs live in git-ignored
+  `.env`/`.env.prod`. **`measurementId` still empty in both** — Google Analytics must be linked
+  in the Firebase console before analytics boots. See **R-014**.
+
 ## Slice #12 — Share button on city pages
 
 - **Date:** 2026-07-07
