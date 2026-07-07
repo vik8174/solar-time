@@ -6,6 +6,35 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Ops — R-014 analytics + monitoring live
+
+- **Date:** 2026-07-07
+- **Type:** Ops ticket (config + deploy + verify) — **no code change**. Feature built in slice #10,
+  hardened in fix #68. Journal-only commit via chore-worktree (R-008).
+- **What:** Brought analytics + error monitoring **live** on both envs by wiring the real keys into
+  the git-ignored `.env` (stage) / `.env.prod` (prod) and redeploying. Analytics had shipped
+  **dormant** because Firebase `measurementId` was empty until Google Analytics was linked (R-014).
+- **Linked / keys:**
+  - **stage** — `solar-time-stage`, GA4 linked, `measurementId=G-LL3CV51B2Q`.
+  - **prod** — `solar-time-prod`, GA4 linked, `measurementId=G-NZ83CW3T21`.
+  - **Sentry** — one DSN for both (`o4511693747388416.ingest.de.sentry.io`, EU); `environment`
+    split by `SITE_ENV` (staging / production).
+  - Firebase account confirmed **vik8174@gmail.com** (R-005) — personal is the intended home.
+- **Deploy:** `deploy:stage` → https://solar-time-stage.web.app, then `deploy:prod` →
+  https://solar-time-prod.web.app. Both green.
+- **In-browser verification (both envs, per fix-#68 method):**
+  - `page_view`, `city_selected` (`ep.slug=berlin`), `geolocation_used` pings all fire to
+    `region1.google-analytics.com/g/collect` with the right `tid`.
+  - **Cookieless holds:** `document.cookie` empty (zero `_ga`); every collect ping carries
+    `gcs=G100` / `npa=1` (Consent Mode signature).
+  - **No coordinates** in any `geolocation_used` payload (`en=geolocation_used&_ee=1&ep.origin=firebase`).
+  - **Sentry captured** a test error on each env — `environment=staging` / `production`, HTTP 200,
+    `infer_ip: never`, no GPS in payload/breadcrumbs, no transaction envelopes (`tracesSampleRate: 0`).
+  - **Not verified headless:** GA4 Realtime console (needs an authenticated console session) — left
+    for Viktor to eyeball.
+- **Follow-ups (separate tickets, do not block):** R-006 custom domain, R-003 branch protection,
+  R-007 repo public.
+
 ## Slice #13 — Responsive / mobile pass (375px → desktop)
 
 - **Date:** 2026-07-07
