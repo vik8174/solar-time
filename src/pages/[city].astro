@@ -204,11 +204,11 @@ const meta = seoMeta({ name: city.name, slug: city.slug }, deviation);
       display: flex;
       justify-content: center;
       align-items: flex-start;
-      padding: 40px 20px 40px;
+      padding: var(--page-pad-y) var(--page-pad-x);
     }
     .content {
       width: 100%;
-      max-width: 480px;
+      max-width: var(--content-max);
     }
     .eyebrow {
       font-family: var(--mono);
@@ -249,6 +249,14 @@ const meta = seoMeta({ name: city.name, slug: city.slug }, deviation);
       font-size: 12px;
       letter-spacing: 0.04em;
       color: var(--muted);
+    }
+
+    /* Mobile: the share action gets a full 44px touch target. */
+    @media (max-width: 480px) {
+      .share-button {
+        min-height: var(--tap-min);
+        padding: 9px 20px;
+      }
     }
   </style>
 </Base>
