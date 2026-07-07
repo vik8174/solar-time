@@ -65,6 +65,29 @@ const valueFontSize = (value: string): number => {
   return 130;
 };
 
+/** The unit ("min") is drawn at this fixed size regardless of the number size. */
+const UNIT_FONT_SIZE = 84;
+
+/**
+ * Vertical nudge (px) that lands the unit on the number's visual baseline.
+ *
+ * satori's `alignItems: 'baseline'` doesn't compute a shared text baseline
+ * across wildly different sizes, so the small unit slid *below* the number
+ * (see #78). Instead the row uses `alignItems: 'flex-end'` with `lineHeight: 1`
+ * on both children, which aligns their box bottoms. The taller number reserves
+ * proportionally more descender space below its glyphs than the unit does, so
+ * without a correction the unit still sits low by that difference. Lifting the
+ * unit with a `paddingBottom` of `k · (numberSize − unitSize)` cancels the gap
+ * — it is 0 when the two sizes match and grows with the size difference. `k`
+ * was tuned against regenerated PNGs and the fit was confirmed empirically at
+ * all three `valueFontSize` branches (measured baseline delta: 240px → 0px,
+ * 170px → 0px, 130px → −1px), so the single factor holds across them. Assumes
+ * `numberSize ≥ UNIT_FONT_SIZE` (true for every `valueFontSize` return); a
+ * smaller number would flip the nudge negative and push the unit too high.
+ */
+const unitBaselineNudge = (numberSize: number): number =>
+  Math.round((numberSize - UNIT_FONT_SIZE) * 0.128);
+
 /** The shared page frame: dark canvas, brand wordmark, centred content. */
 const frame = (children: Node[]): Node =>
   el(
@@ -99,16 +122,29 @@ const frame = (children: Node[]): Node =>
   );
 
 /** Builds the city-card VDOM (number + unit, city name, direction caption). */
-const cityCard = (model: OgCardModel): Node =>
-  frame([
-    el('div', { display: 'flex', alignItems: 'baseline', color: COLOR.accent }, [
+const cityCard = (model: OgCardModel): Node => {
+  const numberSize = valueFontSize(model.value);
+  return frame([
+    el('div', { display: 'flex', alignItems: 'flex-end', color: COLOR.accent }, [
       el(
         'div',
-        { fontSize: `${String(valueFontSize(model.value))}px`, fontWeight: 700 },
+        { fontSize: `${String(numberSize)}px`, fontWeight: 700, lineHeight: 1 },
         model.value,
       ),
       ...(model.unit
-        ? [el('div', { fontSize: '84px', marginLeft: '20px', color: COLOR.muted }, model.unit)]
+        ? [
+            el(
+              'div',
+              {
+                fontSize: `${String(UNIT_FONT_SIZE)}px`,
+                marginLeft: '20px',
+                color: COLOR.muted,
+                lineHeight: 1,
+                paddingBottom: `${String(unitBaselineNudge(numberSize))}px`,
+              },
+              model.unit,
+            ),
+          ]
         : []),
     ]),
     el(
@@ -127,6 +163,7 @@ const cityCard = (model: OgCardModel): Node =>
       ? [el('div', { fontSize: '32px', color: COLOR.muted, marginTop: '16px' }, model.caption)]
       : []),
   ]);
+};
 
 /** Builds the brand/home-card VDOM (wordmark + tagline, no per-city number). */
 const brandCard = (title: string, subtitle: string): Node =>
