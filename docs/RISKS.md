@@ -34,13 +34,15 @@ Global hook `~/.claude/hooks/pr-merge-blocker.sh` blocks `gh pr merge` unconditi
 Merges go through `gh api -X PUT repos/vik8174/solar-time/pulls/N/merge -f
 merge_method=squash`, only after explicit user approval (HITL). Intentional guard.
 
-## R-005 — Firebase account context · open
+## R-005 — Firebase account context · accepted
 
 Firebase/gcloud CLI must be on **vik8174@gmail.com**, not the work Intellias account.
 Wrong account → deploy to the wrong project or auth failure. **Action:** verify active
 account before any deploy. **Confirmed (2026-07-07, R-014 deploy):** active account was
 `vik8174@gmail.com` and personal is the intended home for this portfolio project — no migration
-needed. Kept `open` as a recurring pre-deploy check, not a one-off.
+needed. **Decision (2026-07-07):** the personal account is the **permanent** home — this is
+Viktor's own project, so a work/org account is deliberately out of scope. Status → `accepted`;
+the residual is only the recurring pre-deploy account check, not a pending decision.
 
 ## R-006 — Custom domain not yet acquired · open
 
