@@ -30,7 +30,9 @@ import Base from '../layouts/Base.astro';
         <h2>Your location stays in your browser</h2>
         <p>
           When you tap <strong>“📍 Use my location”</strong>, your coordinates are read by your
-          browser and used <strong>on your device</strong> to compute the solar-time number. They are
+          browser and used <strong>on your device</strong> to compute the solar-time number. They are{
+            ' '
+          }
           <strong>never stored and never sent anywhere</strong>. Refresh the page and they're gone.
         </p>
       </section>
@@ -46,7 +48,7 @@ import Base from '../layouts/Base.astro';
       <section>
         <h2>Anonymous analytics</h2>
         <p>
-          To understand roughly how the tool is used, it records a few
+          To understand roughly how the tool is used, it records a few{' '}
           <strong>anonymous, cookieless</strong> events — a page view, a city selection, whether geolocation
           was used. These carry <strong>no personal data</strong> and no precise location, and they aren't
           tied to an identity.
@@ -56,7 +58,7 @@ import Base from '../layouts/Base.astro';
       <section>
         <h2>Error monitoring without your coordinates</h2>
         <p>
-          If something breaks, an error report helps get it fixed. These reports are
+          If something breaks, an error report helps get it fixed. These reports are{' '}
           <strong>error-only</strong> and are scrubbed so that any <strong
             >GPS coordinates are removed</strong
           > before they're ever sent.
