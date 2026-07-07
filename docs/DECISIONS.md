@@ -263,3 +263,20 @@ run green without real keys and the feature ships dormant until keys are provisi
 `firebase@12.15.0`, `@sentry/browser@10.63.0`. **Assumption:** the pure `src/lib` cores
 (`scrubEvent`, `idleScheduler`, event bus/buffer) carry the guarantees under the D-012 gate; the
 SDKs stay true-external adapters. Adopted with slice #10 (PR #61 / issue #10).
+
+## D-023 — Prod env keys via `.env.prod` + dotenv-cli (not Vite mode) · accepted
+
+Analytics keys (D-022) differ per environment, but the stage/prod split is driven by `SITE_ENV`
+(D-020), **not** Vite mode — and every `astro build` runs in Vite **production** mode, so a magic
+`.env.production` would be auto-loaded for the _stage_ deploy too, defeating the split. **Decision:**
+keep prod keys in a **non-magic `.env.prod`** and have `deploy:prod` load it explicitly via
+**`dotenv-cli`** (`SITE_ENV=prod dotenv -e .env.prod -- npm run build && firebase deploy …`).
+Because `dotenv-cli` puts the values in `process.env`, and Vite's `loadEnv` gives `process.env`
+precedence over `.env` files, `.env.prod`'s `PUBLIC_*` win over the auto-loaded stage `.env` —
+verified end-to-end (`projectId → solar-time-prod` under the dotenv run vs `→ solar-time-stage` on
+a plain build). A non-magic filename is never auto-loaded, so stage/dev builds can't accidentally
+pick up prod keys. **Secrets hygiene:** `.gitignore` covers `.env` + `.env.*` with a
+`!.env.example` negation; only the empty-valued `.env.example` is tracked. **Dep:** `dotenv-cli`
+(exact devDep). **Assumption:** all client keys stay `PUBLIC_*` (inlined, non-secret — Firebase web
+config + Sentry DSN are safe to expose); a truly-secret key would need a different channel (CI
+secret, not `.env.prod`). Adopted with the prod-env-delivery chore (PR #65).

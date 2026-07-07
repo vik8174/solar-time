@@ -103,6 +103,18 @@ test now pins the focus-out behavior. **Watch:** any future island interactivity
 use the DOM-native event names (`onInput` / `onFocusOut`, capture-vs-bubble) rather than assuming
 React synthetic-event semantics — the type checker won't catch it.
 
+## R-014 — Analytics dormant until Google Analytics is linked · open
+
+Slice #10 + the env-delivery chore (D-022 / D-023) ship analytics **inert** in two ways: (1) the
+SDK is off unless its `PUBLIC_*` keys are set, and (2) even with Firebase keys in place, the
+Firebase web config's **`measurementId` is still empty** in both projects — **Google Analytics
+must be linked in the Firebase console** before Analytics actually collects events. Sentry only
+needs its DSN. So on prod today, error monitoring can come up but usage analytics stays silent.
+**Action (manual, ops):** in the Firebase console link a Google Analytics property to
+`solar-time-prod` (and `-stage` if wanted), copy the resulting `measurementId` into
+`.env.prod` / `.env`, and redeploy. Until then analytics is a no-op — not a failure, just unwired.
+**No code change needed.**
+
 ## R-013 — Shared symlinked node_modules breaks under parallel dep changes · mitigated
 
 `scripts/ticket-worktree.sh` symlinks each worktree's `node_modules` to the primary clone's
