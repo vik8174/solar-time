@@ -6,6 +6,19 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix #62 — Footer links wired (BMC + Tally), GitHub dropped
+
+- **Date:** 2026-07-07
+- **PR:** #62 (merged) · follow-up to slice #11 (#58)
+- **What:** Replaced the slice-#11 footer placeholders with real destinations and removed the
+  GitHub item. `SUPPORT_URL` → `https://buymeacoffee.com/viktorkurysh` (page live; Stripe payout
+  deferred, but the link works), `FEEDBACK_URL` → `https://tally.so/r/5B58XQ` (published Tally
+  form, no email exposed).
+- **GitHub item dropped** from the footer + `links.ts`: the repo is private (R-007) so a source
+  link would 404, and a bare profile link wasn't wanted. Footer is now `Privacy · Feedback ·
+Support` + the GeoNames credit. `links.ts` documents re-adding it if the repo goes public.
+- **Scope:** `src/config/links.ts` + `src/layouts/Base.astro` (config + markup only). CI green.
+
 ## Slice #11 — Footer / Privacy / Feedback / Support
 
 - **Date:** 2026-07-06
