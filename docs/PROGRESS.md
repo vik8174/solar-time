@@ -6,6 +6,30 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Slice #13 — Responsive / mobile pass (375px → desktop)
+
+- **Date:** 2026-07-07
+- **PR:** #71 (merged) · **Issue:** #13 (closed)
+- **What:** Cross-screen adaptive pass so every page reads cleanly from **375px → desktop**.
+  **Last roadmap slice** — all tracer bullets #2–#13 now shipped; only issue #1 (PRD) stays open.
+- **Strategy — fluid-first, one mobile breakpoint:** a single `@media (max-width: 480px)`,
+  aligned with the existing `--content-max: 480px` (one number, not a new magic value).
+  Breakpoint + layout scale live as tokens in `tokens.css` (D-006 SSOT): `--content-max`,
+  fluid `--page-pad-x/y` (`clamp`), `--tap-min: 44px`, documented `--bp-mobile`.
+- **Overflow guard:** `body { overflow-wrap: break-word }` prevents long city names from
+  breaking the layout. Tap targets ≥44px on mobile (search input, dropdown options, geo/share
+  buttons, footer nav links, centered dismiss ×); inline sentence links left as-is (WCAG 2.5.5
+  exception).
+- **Scope — visual only:** domain / analytics / OG / `src/lib` untouched; no new testable code.
+  HeroNumber left alone (already fluid).
+- **Files:** `src/styles/tokens.css`, `src/layouts/Base.astro`,
+  `src/pages/{index,[city],privacy}.astro`, `src/components/{CitySearch.css,SolarScale.astro}`.
+- **Verify:** 0 horizontal scroll at 320/375/768/1280 (home, `/[city]`, longest name
+  `Petropavlovsk-Kamchatsky`, `/privacy`); tap targets measured 44px; dropdown within viewport;
+  desktop visually identical to before. Gate green (typecheck / lint / format / 100% lib coverage /
+  build 1087 pages). code-reviewer → PASS WITH NOTES; the ≥75 note (× glyph centering in the 44×44
+  box) fixed pre-merge.
+
 ## Fix #68 — GA4 truly cookieless via Consent Mode
 
 - **Date:** 2026-07-07
