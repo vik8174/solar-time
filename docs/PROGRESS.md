@@ -6,6 +6,22 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Ops — Repo public + `main` branch protection (R-007, R-003)
+
+- **Date:** 2026-07-07
+- **PR:** #75 (this journal) · actions applied directly via `gh` (no source change)
+- **R-007 — repo public:** flipped `vik8174/solar-time` to **public**. Pre-flip safety scan
+  was clean — real `.env`/`.env.prod` never committed (only `.env.example` tracked), no real
+  Firebase/Sentry keys anywhere in history (client `PUBLIC_*` keys are non-secret by design, D-008).
+- **R-003 — branch protection on `main`:** require PR before merge (0 approvals — solo maintainer),
+  required status check **`Checks`** strict/up-to-date, `enforce_admins` on, force-push + branch
+  deletion blocked. Repo merge methods restricted to **squash-only** (merge-commit + rebase off).
+  `stage` intentionally left unprotected (no deploy gate needed there yet).
+- **Consequence:** every future PR — including coordinator docs chores — must now show green
+  `Checks` on GitHub before the `gh api …/merge` (R-004) will succeed. This is the intended cost.
+- **Release-readiness:** with R-014/R-005/R-007/R-003 closed, the only open risks are R-006
+  (custom domain) and R-011 (OG font glyphs, minor). Site is live-ready on `solar-time-prod.web.app`.
+
 ## Ops — R-014 analytics + monitoring live
 
 - **Date:** 2026-07-07
