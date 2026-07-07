@@ -65,6 +65,7 @@ solar-time/
 │   ├── components/    # Astro UI components
 │   ├── data/          # Generated ~1000-city dataset (cities.json + loader)
 │   ├── pages/         # Routes (index + [city] dynamic route)
+│   ├── scripts/       # Client entries (deferredInit: lazy analytics + Sentry)
 │   └── styles/        # Design tokens
 ├── docs/              # Durable project history (see below)
 └── handoffs/          # Disposable coordinator → worker handoffs (git-ignored)
@@ -79,6 +80,29 @@ dataset (CC-BY 4.0) by `scripts/buildCities.ts`:
 npm run build:cities
 ```
 
+## Configuration
+
+Client analytics + error monitoring (ADR D-008) are configured through `PUBLIC_*`
+env vars. Copy [`.env.example`](.env.example) to `.env` and fill in per environment:
+
+| Variable                         | Service            | Notes                              |
+| :------------------------------- | :----------------- | :--------------------------------- |
+| `PUBLIC_FIREBASE_API_KEY`        | Firebase Analytics | Required to boot Analytics         |
+| `PUBLIC_FIREBASE_PROJECT_ID`     | Firebase Analytics | Required                           |
+| `PUBLIC_FIREBASE_APP_ID`         | Firebase Analytics | Required                           |
+| `PUBLIC_FIREBASE_MEASUREMENT_ID` | Firebase Analytics | Required (`G-…`)                   |
+| `PUBLIC_FIREBASE_AUTH_DOMAIN`    | Firebase Analytics | Optional                           |
+| `PUBLIC_SENTRY_DSN`              | Sentry             | Enables the error monitor when set |
+
+These are **not secrets** — Astro inlines them into the client bundle, and both
+the Firebase web config and the Sentry DSN are safe to expose. Any group left
+unset simply turns that SDK **off**, so local dev, CI, and the build all run
+green without real keys. Both SDKs load lazily after `requestIdleCallback`
+(shared `deferredInit`), so they never block first paint; Analytics is cookieless
+(zero cookies), and Sentry is error-only with GPS coordinates scrubbed from every
+event. The Sentry `environment` tag (`staging` / `production`) is derived from
+`SITE_ENV` at build time (see `src/config/site.ts`), not from an env var.
+
 ## Deployment
 
 Deploys go to Firebase Hosting. Project aliases are defined in `.firebaserc`:
@@ -89,8 +113,8 @@ Deploys go to Firebase Hosting. Project aliases are defined in `.firebaserc`:
 | `prod`  | `solar-time-prod`  | `npm run deploy:prod`  |
 
 Both scripts run `npm run build` first, then `firebase deploy --only hosting -P <alias>`.
-The build is identical across environments today; environment-specific differences
-(e.g. `noindex`, analytics) will arrive in later slices.
+`deploy:prod` sets `SITE_ENV=prod`, which drives environment-specific behavior —
+indexing/robots/sitemap (D-020) and the Sentry `environment` tag (D-008).
 
 > `deploy:prod` hits the **live production** project. It's a deliberate manual
 > action — there is no CI auto-deploy on merge.

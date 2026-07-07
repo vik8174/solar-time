@@ -75,6 +75,7 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
   </main>
 
   <script>
+    import { trackEvent } from '../lib/analytics';
     import { computeDeviation } from '../domain/solarTime';
     import { buildCityViewModel } from '../lib/cityViewModel';
     import { findNearestCity } from '../lib/findNearestCity';
@@ -233,6 +234,9 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
             const nearest = geoIndex ? findNearestCity(lat, lon, geoIndex) : null;
             const label = locatedLabel(nearest);
             setEyebrow(label.primary, label.near ?? '');
+            // Anonymous "geolocation was used" event — deliberately carries NO
+            // coordinates (PRD story 29/30); the fix never leaves the browser.
+            trackEvent('geolocation_used');
             dispatch({ type: 'SUCCESS', coords: { lat, lon } });
           })
           .catch(dispatchForError);

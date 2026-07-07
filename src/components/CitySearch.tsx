@@ -18,6 +18,7 @@
 import type { JSX, TargetedKeyboardEvent } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 
+import { trackEvent } from '../lib/analytics';
 import { resolveDefaultCity, type ZoneCity } from '../lib/resolveDefaultCity';
 import { buildCityIndex, searchCities, type CityIndex, type SearchCity } from '../lib/citySearch';
 import './CitySearch.css';
@@ -104,6 +105,10 @@ export default function CitySearch({
   const showEmpty = open && index !== null && trimmed !== '' && results.length === 0;
 
   const selectCity = (city: SearchCity): void => {
+    // Anonymous "a city was chosen" event — just the slug, no personal data
+    // (D-008). The event is buffered until analytics boots and survives the
+    // ensuing View-Transition navigation (same JS context).
+    trackEvent('city_selected', { slug: city.slug });
     if (onSelect) {
       onSelect(city);
       setOpen(false);

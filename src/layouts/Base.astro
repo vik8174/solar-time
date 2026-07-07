@@ -15,6 +15,7 @@ import { ClientRouter } from 'astro:transitions';
 
 import CitySearch from '../components/CitySearch.tsx';
 import { FEEDBACK_URL, GEONAMES_URL, SUPPORT_URL } from '../config/links';
+import { ANALYTICS_ENV } from '../config/site';
 import '../styles/tokens.css';
 
 interface Props {
@@ -84,7 +85,7 @@ const ogImage = ogImagePath && site ? new URL(ogImagePath, site).href : undefine
     {ogImage && <meta name="twitter:image" content={ogImage} />}
     <ClientRouter />
   </head>
-  <body>
+  <body data-analytics-env={ANALYTICS_ENV}>
     <header class="site-header" transition:persist>
       <CitySearch client:idle />
     </header>
@@ -164,6 +165,25 @@ const ogImage = ogImagePath && site ? new URL(ogImagePath, site).href : undefine
   };
 
   document.addEventListener('astro:page-load', initSupport);
+</script>
+
+<script>
+  import { startDeferredInit, trackEvent } from '../scripts/deferredInit';
+
+  /**
+   * Analytics + error-monitoring mount (D-008, D-021). Runs once per full load
+   * (Astro hoists module scripts, so it survives View Transitions): boot both
+   * SDKs after idle via `deferredInit`, then emit an anonymous `page_view` on
+   * the initial load and after every navigation. The environment tag is baked
+   * into `data-analytics-env` at build time (D-020); the SDK keys reach the
+   * client through `import.meta.env.PUBLIC_*` inside `deferredInit`.
+   */
+  const environment = document.body.dataset.analyticsEnv ?? 'staging';
+  startDeferredInit(environment);
+
+  document.addEventListener('astro:page-load', () => {
+    trackEvent('page_view', { path: window.location.pathname });
+  });
 </script>
 
 <style>
