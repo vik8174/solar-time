@@ -6,6 +6,23 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix #77 — Missing space before inline tags that wrap to a new line
+
+- **Date:** 2026-07-07
+- **PR:** #93 (merged) · **Issue:** #77 (closed)
+- **What:** On `/privacy` and home, words glued to a following bold/link — "a fewanonymous",
+  "arenever stored", "leaves it.Privacy". `compressHTML` (Astro default `true`) collapses the
+  whitespace between a text node and an inline element **to nothing** when the tag opens on the
+  _next_ source line; a same-line space (`any <strong>`) survives.
+- **Fix:** explicit `{' '}` separator before each of the **5** affected inline tags
+  (`privacy.astro` ×3, `index.astro`, `Base.astro`) — point fix, keeps `compressHTML`/minification
+  on (no global `compressHTML: false`). Verified in built `dist` (space present; glued forms gone).
+- **Guard:** `src/inlineTagSpacing.test.ts` scans every `.astro` for the anti-pattern (text char
+  directly against a newline-opened `<strong>`/`<a>`). Only a real `{' '}`/`{" "}` separator counts
+  as a fix — an arbitrary interpolation like `{count}` glues the same way and is still flagged.
+- **Spun off:** the red `Deploy Preview` / `PR preview deploy` checks are a pre-existing infra
+  failure (Firebase preview-channel quota), not this change — filed as R-015 / issue #96.
+
 ## Ops — Repo public + `main` branch protection (R-007, R-003)
 
 - **Date:** 2026-07-07
