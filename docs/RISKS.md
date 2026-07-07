@@ -38,7 +38,9 @@ merge_method=squash`, only after explicit user approval (HITL). Intentional guar
 
 Firebase/gcloud CLI must be on **vik8174@gmail.com**, not the work Intellias account.
 Wrong account → deploy to the wrong project or auth failure. **Action:** verify active
-account before any deploy.
+account before any deploy. **Confirmed (2026-07-07, R-014 deploy):** active account was
+`vik8174@gmail.com` and personal is the intended home for this portfolio project — no migration
+needed. Kept `open` as a recurring pre-deploy check, not a one-off.
 
 ## R-006 — Custom domain not yet acquired · open
 
@@ -103,7 +105,7 @@ test now pins the focus-out behavior. **Watch:** any future island interactivity
 use the DOM-native event names (`onInput` / `onFocusOut`, capture-vs-bubble) rather than assuming
 React synthetic-event semantics — the type checker won't catch it.
 
-## R-014 — Analytics dormant until Google Analytics is linked · open
+## R-014 — Analytics dormant until Google Analytics is linked · resolved
 
 Slice #10 + the env-delivery chore (D-022 / D-023) ship analytics **inert** in two ways: (1) the
 SDK is off unless its `PUBLIC_*` keys are set, and (2) even with Firebase keys in place, the
@@ -114,6 +116,11 @@ needs its DSN. So on prod today, error monitoring can come up but usage analytic
 `solar-time-prod` (and `-stage` if wanted), copy the resulting `measurementId` into
 `.env.prod` / `.env`, and redeploy. Until then analytics is a no-op — not a failure, just unwired.
 **No code change needed.**
+**Resolved (2026-07-07):** GA linked to prod (`G-NZ83CW3T21`) and stage (`G-LL3CV51B2Q`), Sentry
+DSN set in both env files, deployed stage→prod and **verified live in-browser** — `page_view` /
+`city_selected` / `geolocation_used` pings fire cookieless (`gcs=G100`/`npa=1`, zero `_ga`, no
+coords), Sentry captures with `environment=staging`/`production`. R-005 confirmed: Firebase stays
+on personal `vik8174@gmail.com`. See PROGRESS "Ops — R-014".
 
 ## R-013 — Shared symlinked node_modules breaks under parallel dep changes · mitigated
 
