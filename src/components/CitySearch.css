@@ -6,7 +6,7 @@
 .city-search {
   position: relative;
   width: 100%;
-  max-width: 480px;
+  max-width: var(--content-max);
   margin: 0 auto;
   font-family: var(--sans);
 }
@@ -96,4 +96,23 @@
 
 .city-search__locate:hover {
   border-color: var(--accent);
+}
+
+/*
+ * Mobile: comfortable touch targets — a taller input and result rows, and a
+ * full-height "use my location" button (WCAG 2.5.5, --tap-min). The dropdown
+ * is already left:0/right:0 within the relative wrapper, so it can't clip.
+ */
+@media (max-width: 480px) {
+  .city-search__input {
+    min-height: var(--tap-min);
+  }
+  .city-search__option {
+    display: flex;
+    align-items: center;
+    min-height: var(--tap-min);
+  }
+  .city-search__locate {
+    min-height: var(--tap-min);
+  }
 }

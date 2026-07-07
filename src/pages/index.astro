@@ -249,11 +249,11 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
       display: flex;
       justify-content: center;
       align-items: flex-start;
-      padding: 40px 20px;
+      padding: var(--page-pad-y) var(--page-pad-x);
     }
     .content {
       width: 100%;
-      max-width: 480px;
+      max-width: var(--content-max);
     }
     .eyebrow {
       font-family: var(--mono);
@@ -315,6 +315,14 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
     }
     .geo-note a:hover {
       color: var(--muted);
+    }
+
+    /* Mobile: the primary action gets a full 44px touch target. */
+    @media (max-width: 480px) {
+      .geo-button {
+        min-height: var(--tap-min);
+        padding: 9px 20px;
+      }
     }
   </style>
 </Base>

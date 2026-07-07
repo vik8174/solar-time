@@ -188,7 +188,7 @@ const ogImage = ogImagePath && site ? new URL(ogImagePath, site).href : undefine
 
 <style>
   .site-header {
-    padding: 16px 20px 0;
+    padding: 16px var(--page-pad-x) 0;
   }
 
   .support {
@@ -197,7 +197,7 @@ const ogImage = ogImagePath && site ? new URL(ogImagePath, site).href : undefine
     justify-content: center;
     gap: 8px;
     margin: 0 auto 8px;
-    padding: 0 20px;
+    padding: 0 var(--page-pad-x);
     text-align: center;
   }
   .support-note {
@@ -214,6 +214,9 @@ const ogImage = ogImagePath && site ? new URL(ogImagePath, site).href : undefine
   }
   .support-dismiss {
     flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 22px;
     height: 22px;
     padding: 0;
@@ -229,7 +232,7 @@ const ogImage = ogImagePath && site ? new URL(ogImagePath, site).href : undefine
   }
 
   .site-footer {
-    padding: 24px 20px 32px;
+    padding: 24px var(--page-pad-x) 32px;
     text-align: center;
   }
   .footer-links {
@@ -247,6 +250,23 @@ const ogImage = ogImagePath && site ? new URL(ogImagePath, site).href : undefine
   }
   .footer-links a:hover {
     color: var(--accent);
+  }
+
+  /* Mobile: give the footer links and the dismiss control a real touch area. */
+  @media (max-width: 480px) {
+    .footer-links {
+      gap: 6px 12px;
+    }
+    .footer-links a {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--tap-min);
+      padding: 0 8px;
+    }
+    .support-dismiss {
+      width: var(--tap-min);
+      height: var(--tap-min);
+    }
   }
   .footer-credit {
     margin: 12px 0 0;

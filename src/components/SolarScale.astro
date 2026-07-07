@@ -32,7 +32,7 @@ const { geometry, solarNoonLabel } = Astro.props;
 
 <style>
   .scale {
-    margin: 44px 0 8px;
+    margin: clamp(28px, 8vw, 44px) 0 8px;
   }
   .scale svg {
     width: 100%;
@@ -42,11 +42,18 @@ const { geometry, solarNoonLabel } = Astro.props;
   .caption {
     display: flex;
     justify-content: space-between;
+    gap: 12px;
     font-family: var(--mono);
     font-size: 11px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--muted-dim);
     margin-top: 6px;
+  }
+  /* Narrow: the two ends can meet — drop the tracking so they never touch. */
+  @media (max-width: 480px) {
+    .caption {
+      letter-spacing: 0.02em;
+    }
   }
 </style>
