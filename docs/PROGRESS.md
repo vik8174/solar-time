@@ -6,6 +6,35 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Slice #10 — Analytics + error monitoring
+
+- **Date:** 2026-07-07
+- **PR:** #61 (merged) · **Issue:** #10 (closed)
+- **What:** A shared **`deferredInit`** boots **Firebase Analytics** (cookieless) and **Sentry**
+  (error-only) after `requestIdleCallback`, so neither blocks first paint. Mounted once from
+  `Base.astro` as a plain module `<script>` (not a Preact island, D-021). Both SDKs are
+  **dynamically imported inside the idle callback**, so the ~446 KB Firebase chunk stays out of
+  the critical path (only a ~2.3 KB mount chunk loads eagerly). See **ADR D-022**.
+- **Analytics — cookieless:** `client_storage: 'none'` (no GA cookie) + `send_page_view: false`
+  (we emit our own) + ad/Google signals off. Anonymous events: `page_view`, `city_selected`
+  (slug — emitted from `CitySearch.selectCity`), `geolocation_used` (**no coordinates**). Zero
+  cookies (Firebase Installations uses IndexedDB, which is not a cookie).
+- **Monitoring — error-only:** `tracesSampleRate: 0`, no tracing/replay integrations ever
+  imported; `environment` tag from `SITE_ENV` (build-time). `beforeSend` runs the pure
+  **`scrubEvent`** which strips GPS across four vectors — coordinate-named keys, `[lat, lon]`
+  arrays, `lat=/lon=` URL params, and free-text decimal pairs / high-precision decimals.
+- **Env delivery:** client keys via `PUBLIC_*` (inlined, not secret); **any key group unset ⇒
+  that SDK is off**, so local/CI/build stay green with no real keys. `.env.example` documents them.
+- **Testability (D-012):** pure `src/lib` cores fully covered — `idleScheduler`, `scrubEvent`,
+  `analyticsEnv`, `analytics` (event bus), `eventBuffer` (bounded buffer/flush). SDKs are
+  true-external, mocked at the boundary; `deferredInit` is a thin adapter in `src/scripts`
+  (outside the gated dirs). **273 tests, 100% stmts/lines/funcs on `src/lib`.**
+- **Deps:** `firebase@12.15.0`, `@sentry/browser@10.63.0` (exact). code-reviewer → PASS
+  (scrub hardened pre-merge). Coordinator review confirmed the `beforeSend`→`scrubEvent` wiring.
+- **⏳ Ops follow-up:** the feature ships **dormant** until real `PUBLIC_FIREBASE_*` + a
+  `PUBLIC_SENTRY_DSN` are set in `.env` + CI/deploy env (Firebase config from the existing
+  hosting project with Analytics enabled; Sentry DSN from a new project).
+
 ## Fix #62 — Footer links wired (BMC + Tally), GitHub dropped
 
 - **Date:** 2026-07-07

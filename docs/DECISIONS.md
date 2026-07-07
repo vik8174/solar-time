@@ -243,3 +243,23 @@ use **Preact** for islands, via a **full migration to `preact/hooks`** (not `@as
 wrapper + test harness (`@testing-library/preact`) changed. **Assumption / guardrail:** future
 islands use Preact + `preact/hooks`; mind the event-model differences from React (see R-012).
 Realizes the D-001 intent that earlier slices deferred. Adopted with perf #44 (PR #56 / issue #44).
+
+## D-022 — Analytics + error monitoring stack (deferred, cookieless, scrubbed) · accepted
+
+Product needs anonymous usage analytics + error monitoring (D-008, PRD stories 29–30) without
+betraying the tool's privacy-first, near-zero-JS posture (D-001). **Decision:** **Firebase
+Analytics** (cookieless) + **Sentry** (error-only), both booted by a single shared
+**`deferredInit`** after `requestIdleCallback`, mounted from `Base.astro` as a plain module
+`<script>` (not a Preact island — D-021). Both SDKs are **dynamically imported inside the idle
+callback**, so their weight (Firebase ~446 KB) never enters the critical path. **Cookieless:**
+gtag `client_storage: 'none'` + `send_page_view: false` + ad/Google signals off — no analytics
+cookie (Installations' IndexedDB is not a cookie); no consent banner. **Error-only:**
+`tracesSampleRate: 0` and no tracing/replay integrations imported, so none ship; `environment`
+from `SITE_ENV` (D-020). **Privacy invariant:** Sentry's `beforeSend` runs the pure, hard-tested
+`scrubEvent`, which removes GPS by key name, `[lat, lon]` array shape, URL param, and free-text
+decimal — a coordinate must never leave the device (PRD story 30). **Env-key delivery:** client
+keys via `PUBLIC_*` (inlined, non-secret); **an unset key group disables that SDK**, so builds/CI
+run green without real keys and the feature ships dormant until keys are provisioned. **Pinned:**
+`firebase@12.15.0`, `@sentry/browser@10.63.0`. **Assumption:** the pure `src/lib` cores
+(`scrubEvent`, `idleScheduler`, event bus/buffer) carry the guarantees under the D-012 gate; the
+SDKs stay true-external adapters. Adopted with slice #10 (PR #61 / issue #10).
