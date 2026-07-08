@@ -115,7 +115,7 @@ const frame = (children: Node[]): Node =>
           letterSpacing: '0.24em',
           color: COLOR.muted,
         },
-        'SOLAR TIME',
+        'SOLAR DRIFT',
       ),
       ...children,
     ],
@@ -218,7 +218,7 @@ export const renderCityCard = async (model: OgCardModel): Promise<Uint8Array<Arr
     return await toPng(cityCard(model));
   } catch (error) {
     console.warn(`og: city card fell back to the brand card for "${model.city}"`, error);
-    return toPng(brandCard('Solar Time', 'How far your clock is from the sun'));
+    return toPng(brandCard('Solar Drift', 'How far your clock is from the sun'));
   }
 };
 
