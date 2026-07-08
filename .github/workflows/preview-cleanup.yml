@@ -13,15 +13,15 @@ on:
   # Reclaim a PR's channel the moment it closes (merged or not).
   pull_request:
     types: [closed]
-  # Manual full prune of stale pr* channels — the coordinator runs this once
-  # after merge to unblock the quota without a local Firebase login:
+  # Manual full prune of every pr* channel — the coordinator runs this once to
+  # unblock the quota without a local Firebase login:
   #   gh workflow run preview-cleanup.yml
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# Serialize channel mutations on the shared site so a full prune and a
+# Serialize channel mutations on the shared site so a manual prune and a
 # per-PR cleanup can't race each other's list/delete.
 concurrency:
   group: preview-cleanup-solar-time-stage
@@ -33,13 +33,17 @@ env:
   FIREBASE_TOOLS_VERSION: 13.29.1
 
 jobs:
-  # Delete the closed PR's preview channel(s). Skipped for fork PRs: forks don't
-  # receive repo secrets, so the service-account credential would be empty.
-  cleanup:
-    name: Delete closed PR channel
+  # One job for both triggers — the only difference is which channels get
+  # reclaimed (see the filter below), so the setup lives in a single place.
+  # Fork guard: on `pull_request` we require the head to be same-repo, because
+  # forks don't receive the service-account secret. `workflow_dispatch` is
+  # restricted to users with repo write access, so its secret is always present.
+  reclaim:
+    name: Reclaim preview channels
     if: >-
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     steps:
       - name: Install firebase-tools
@@ -48,79 +52,69 @@ jobs:
       - name: Write service-account credential
         env:
           SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGE }}
-        run: printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+        run: |
+          set -euo pipefail
+          # The secret may be stored as raw JSON or base64 (FirebaseExtended's
+          # action accepts either), so detect the format instead of assuming.
+          # Raw JSON starts with `{`; base64 of JSON starts with `ey`.
+          first="$(printf '%s' "$SA" | tr -d '[:space:]' | cut -c1)"
+          if [ "$first" = "{" ]; then
+            printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          else
+            printf '%s' "$SA" | base64 -d > "$RUNNER_TEMP/sa.json"
+          fi
 
-      - name: Delete channel(s) for PR #${{ github.event.number }}
+      - name: Reclaim channels
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+          EVENT: ${{ github.event_name }}
           PR: ${{ github.event.number }}
         run: |
           set -euo pipefail
 
-          # The action-hosting-deploy channelId is `pr<N>-<sanitized-branch>`
-          # (the suffix may be truncated), so we never guess the full id — we
-          # list channels and match the `pr<N>-` prefix. Anchored with a
-          # trailing `-`/end so pr9 never matches pr93.
-          firebase hosting:channel:list \
-            --project "$FIREBASE_PROJECT" --json > channels.json
+          # `channel:list --json` sends BOTH results and errors to stdout, so a
+          # blind `> file` would hide the reason for a failure. Capture it and
+          # print both streams if the command fails.
+          if ! firebase hosting:channel:list \
+            --project "$FIREBASE_PROJECT" --json > channels.json 2> list.err; then
+            echo "::error::firebase hosting:channel:list failed"
+            echo "--- stderr ---"; cat list.err || true
+            echo "--- stdout (channels.json) ---"; cat channels.json || true
+            exit 1
+          fi
+
+          # Which channels to reclaim:
+          #  - pull_request (closed): only this PR's channel(s). The
+          #    action-hosting-deploy channelId is `pr<N>-<sanitized-branch>` and
+          #    the suffix can be truncated, so we never guess it — we match the
+          #    `pr<N>-` prefix. Anchored with a trailing `-`/end so pr9 never
+          #    matches pr93.
+          #  - workflow_dispatch: every `pr*` channel. Channels for still-open
+          #    PRs are regenerated on their next push, so this safely reclaims
+          #    the whole quota in one shot.
+          if [ "$EVENT" = "pull_request" ]; then
+            pattern="^pr${PR}(-|\$)"
+            empty_msg="No preview channel found for PR #${PR} — nothing to delete."
+          else
+            pattern="^pr[0-9]+(-|\$)"
+            empty_msg="No pr* preview channels found — quota already clear."
+          fi
 
           ids="$(jq -r '.result.channels[].name | split("/") | last' channels.json \
-            | grep -E "^pr${PR}(-|$)" || true)"
+            | grep -E "$pattern" || true)"
 
           if [ -z "$ids" ]; then
-            echo "No preview channel found for PR #${PR} — nothing to delete."
+            echo "$empty_msg"
             exit 0
           fi
 
-          echo "$ids" | while IFS= read -r id; do
-            [ -n "$id" ] || continue
-            echo "Deleting channel: $id"
-            # Tolerate an already-expired/gone channel (idempotent cleanup).
-            firebase hosting:channel:delete "$id" \
-              --project "$FIREBASE_PROJECT" --force \
-              || echo "::warning::delete failed or channel already gone: $id"
-          done
-
-  # Manual full prune: list every pr* channel and delete it. Channels for still-
-  # open PRs are regenerated on their next push, so this safely reclaims the
-  # whole quota in one shot. workflow_dispatch is restricted to users with repo
-  # write access, so secrets are available and there is no fork concern.
-  prune:
-    name: Prune all pr* channels
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install firebase-tools
-        run: npm install -g firebase-tools@"$FIREBASE_TOOLS_VERSION"
-
-      - name: Write service-account credential
-        env:
-          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGE }}
-        run: printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
-
-      - name: List and delete stale pr* channels
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
-        run: |
-          set -euo pipefail
-
-          firebase hosting:channel:list \
-            --project "$FIREBASE_PROJECT" --json > channels.json
-
-          ids="$(jq -r '.result.channels[].name | split("/") | last' channels.json \
-            | grep -E '^pr[0-9]+(-|$)' || true)"
-
-          if [ -z "$ids" ]; then
-            echo "No pr* preview channels found — quota already clear."
-            exit 0
-          fi
-
-          echo "Pruning the following channels:"
+          echo "Reclaiming the following channels:"
           echo "$ids"
 
           echo "$ids" | while IFS= read -r id; do
             [ -n "$id" ] || continue
             echo "Deleting channel: $id"
+            # Tolerate an already-expired/gone channel (idempotent cleanup).
             firebase hosting:channel:delete "$id" \
               --project "$FIREBASE_PROJECT" --force \
               || echo "::warning::delete failed or channel already gone: $id"
