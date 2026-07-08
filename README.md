@@ -1,4 +1,4 @@
-# Solar Time
+# Solar Drift
 
 How far your clock drifts from the sun. A small Astro web tool that shows, for a
 given city, how much the official wall-clock time deviates from true (apparent)

@@ -12,6 +12,6 @@ import { renderBrandCard } from '../../og/renderOgCard';
 export const prerender = true;
 
 export const GET: APIRoute = async () => {
-  const png = await renderBrandCard('Solar Time', 'How far your clock is from the sun');
+  const png = await renderBrandCard('Solar Drift', 'How far your clock is from the sun');
   return new Response(png, { headers: { 'Content-Type': 'image/png' } });
 };

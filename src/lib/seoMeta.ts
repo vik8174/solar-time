@@ -12,6 +12,10 @@
  * the build instant, and the ±1-minute drift over a build's lifetime is
  * acceptable for SEO. The volatile number lives only in the description; the
  * title stays evergreen for keyword matching ("solar time {city}", story 14).
+ *
+ * NOTE: "Solar time in {city}" is the physics/SEO keyword phrase, not the
+ * "Solar Drift" brand wordmark — it is intentionally excluded from the brand
+ * rename (#94), like "apparent/mean/true solar time" elsewhere. Do not rename.
  */
 
 import type { Deviation } from '../domain/solarTime';
