@@ -11,9 +11,15 @@
   font-family: var(--sans);
 }
 
+/* Positioned wrapper so the clear (×) button can overlay the input's right edge. */
+.city-search__field {
+  position: relative;
+}
+
 .city-search__input {
   width: 100%;
-  padding: 10px 14px;
+  /* Right padding leaves room for the overlaid × so typed text never runs under it. */
+  padding: 10px 40px 10px 14px;
   font-family: var(--sans);
   font-size: 15px;
   color: var(--text);
@@ -21,6 +27,32 @@
   border: 1px solid var(--axis);
   border-radius: 8px;
   outline: none;
+}
+
+/* Clear (×) — overlays the input's right edge; only rendered when there's text. */
+.city-search__clear {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-family: var(--sans);
+  font-size: 20px;
+  line-height: 1;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.city-search__clear:hover {
+  color: var(--text);
 }
 
 .city-search__input::placeholder {
@@ -105,6 +137,13 @@
  */
 @media (max-width: 480px) {
   .city-search__input {
+    min-height: var(--tap-min);
+    /* The × grows to a --tap-min hit area here, so widen the right padding to
+     * match (tap-min + its 6px offset) — long city names never run under it. */
+    padding-right: calc(var(--tap-min) + 6px);
+  }
+  .city-search__clear {
+    min-width: var(--tap-min);
     min-height: var(--tap-min);
   }
   .city-search__option {
