@@ -77,7 +77,16 @@ jobs:
       - name: Build
         run: npm run build
 
+      # continue-on-error on the deploy step (not the whole job) so a failed
+      # preview deploy leaves the job — and thus the "PR preview deploy" check —
+      # green, without masking a genuine build regression (the Build step above
+      # has no such tolerance and still fails the job). Preview is a
+      # non-required, best-effort convenience; the required gate is `ci`/
+      # "Checks". This stops an infra hiccup like a channel-quota 429 (#96) from
+      # reading as a broken PR. The real result stays visible in this step's log
+      # and the action's own "Deploy Preview" check. (Option 4 from #96.)
       - name: Deploy preview channel
+        continue-on-error: true
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
