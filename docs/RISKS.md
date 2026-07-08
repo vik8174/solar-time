@@ -156,7 +156,7 @@ follow-up:** consider hardening `ticket-worktree.sh` — e.g. `npm ci` into the 
 symlinking (or detect a lockfile/`node_modules` mismatch) when a concurrent slice touches deps.
 Acute only while two slices run in parallel and one changes `package.json`.
 
-## R-015 — Firebase preview-channel quota exhausted → every PR's preview check is red · open
+## R-015 — Firebase preview-channel quota exhausted → every PR's preview check is red · resolved
 
 The `preview` job (`ci.yml:55`, `FirebaseExtended/action-hosting-deploy@v0`) creates a per-PR
 Firebase Hosting preview channel on `solar-time-stage`. Firebase caps active preview channels per
@@ -166,6 +166,17 @@ window the accumulated `pr*` channels exceed the quota. Result: `Deploy Preview`
 fail on **every** same-repo PR (seen on #93, #76, #75, #74 — including doc-only branches that don't
 change site output, proving it's infra, not code). The required `Checks` gate is unaffected, so PRs
 stay mergeable (`UNSTABLE`) and the coordinator merges as before — but the red X is misleading and
-would mask a genuine preview regression. **Filed as issue #96.** **Fix (proposed):** auto-delete the
-channel on `pull_request: closed` + shorten `expires` to ~2d; one-time manual prune of stale `pr*`
-channels to unblock now (needs Firebase account access). Non-blocking for feature work.
+would mask a genuine preview regression. **Filed as issue #96.**
+**Resolved (2026-07-08, PRs #99 + #100):** four-part fix —
+(1) TTL `expires 7d → 2d` in `ci.yml` as a self-reclaim backstop;
+(2) `continue-on-error` on the preview **deploy step** so an infra preview failure no longer
+paints the run red while a genuine build regression still fails the job;
+(3) a separate `preview-cleanup.yml` (kept out of `ci.yml` so the required `Checks` context is
+untouched) with one `reclaim` job that, on `pull_request: closed`, deletes the PR's channel by
+`pr<N>-` prefix (never guessing the truncated suffix), and on `workflow_dispatch` prunes **all**
+`pr*` channels via the same `FIREBASE_SERVICE_ACCOUNT_STAGE` SA — no local Firebase login needed;
+(4) one-time prune dispatched post-merge cleared **50 stale channels**, and the next PR (#100)
+got a healthy preview channel again (state `CLEAN`, no 429).
+**Gotcha for future edits:** the reclaim job needs `actions/checkout` — `firebase
+hosting:channel:list/delete` error `"Not in a Firebase app directory"` without `firebase.json`,
+and `--json` hides that error in stdout, so keep the failure-surfacing `cat channels.json`.
