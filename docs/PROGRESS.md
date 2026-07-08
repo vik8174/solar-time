@@ -6,6 +6,22 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Chore #94 — Brand rename: Solar Time → Solar Drift
+
+- **Date:** 2026-07-08
+- **PR:** #103 (merged) · **Issue:** #94 (closed)
+- **What:** Renamed the product **Solar Time → Solar Drift** — the name now conveys the core (the
+  _drift_ between clock time and true solar time) and avoids the overloaded "time shift". Replaced
+  the brand string in all 9 user-facing spots: `og:site_name` (`Base.astro`), the OG wordmark +
+  brand-card title (`renderOgCard.ts`), `og/home.png.ts`, the home + privacy `<title>`s, the
+  privacy copy, and `README.md`. Tagline "How far your clock is from the sun" unchanged.
+- **Out of scope (unchanged):** Firebase project IDs `solar-time-prod`/`-stage` (immutable GCP IDs;
+  internal deploy targets) and the GitHub repo slug — the repo rename to `solar-drift` is a
+  separate coordinator action (Settings → Rename, auto-redirects).
+- **Verify:** OG PNGs regenerated with the `SOLAR DRIFT` wordmark; no brand "Solar Time" left in
+  `dist` (only the `*.web.app` deploy URLs). Preview checks green (first PR since the #96 fix).
+- **Chosen domain:** `solardrift.app` (free; `.app` = HTTPS-native) — see R-006.
+
 ## Fix #96 — Firebase preview-channel quota exhausted (429 on every PR)
 
 - **Date:** 2026-07-08

@@ -55,6 +55,11 @@ the residual is only the recurring pre-deploy account check, not a pending decis
 Skeleton/stage run on `*.web.app`. Custom domain (.app or .com, ~$12/yr) deferred to
 the release slice. **Action:** buy + wire DNS + Firebase custom domain at release;
 also flip repo public and add analytics keys then.
+**Chosen (2026-07-08):** **`solardrift.app`** — verified free (RDAP + no NS), matches the
+Solar Drift brand (#94), `.app` = TLD-enforced HTTPS (zero friction with Firebase Hosting).
+Recommended registrar: Cloudflare (at-cost, ~$14/yr, free WHOIS privacy). **Still pending
+purchase** (owner action); once bought → attach in Firebase console → swap `site` in
+`src/config/site.ts` → redeploy → resolve.
 
 ## R-007 — Repo still private · resolved
 
