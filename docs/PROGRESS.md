@@ -6,6 +6,34 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix #79 — Search: close + clear on select, add a clear (×) button
+
+- **Date:** 2026-07-08
+- **PR:** #105 (merged) · **Issue:** #79 (closed)
+- **What:** Selecting a city left the dropdown **open with the stale query** on the destination
+  page, and there was no visible way to empty the field (Escape was desktop-only). The site-wide
+  search island lives in `<header transition:persist>` (`Base.astro`), so the same `CitySearch`
+  instance — with its `query`/`open`/`activeIndex` state — was carried across the View-Transition
+  navigation to `/{city}` and arrived dirty.
+- **Fix (a) — close + clear on both paths:** moved the `setOpen(false)` / `setQuery('')` /
+  `setActiveIndex(0)` reset **out** of the `onSelect`-only (test) branch in `selectCity`, via
+  `onSelect?.(city)`, so it fires for both native-nav (prod) and injected `onSelect` (tests).
+  Setting state right before the `<a>` nav doesn't cancel it → the persisted island lands on the
+  destination **empty and closed**.
+- **Fix (b) — clear (×) button:** a real `<button type="button" aria-label="Clear search">`,
+  shown only when `query !== ''`; clears the field and **keeps focus on the input** (retype), list
+  self-closes (no query → no results). `--tap-min` (44px) touch target on mobile; styled via
+  `tokens.css` (SSOT). Reuses the existing Escape-clear intent as a visible, mobile-usable control.
+- **Scope:** `CitySearch.tsx` + `CitySearch.css` + `CitySearch.test.tsx` only — pure
+  `src/lib/citySearch.ts` (ranking) untouched. Ran isolated (no file overlap with #83 in flight).
+- **Tests (TDD, behavioral):** select → listbox gone **and** input empty; × clears + keeps input
+  focus; × hidden when empty; Escape-clear regression guard.
+- **Verify:** gate green (typecheck / lint / format / coverage / build); PR `Checks` (1m28s) +
+  Deploy Preview + PR preview all green. Merged via `gh api` (squash), commit `5de5292`.
+- **Follow-up (non-blocking):** the real View-Transition acceptance repro (empty + closed box on
+  the destination page) is best eyeballed on the green **deploy preview** — jsdom can't exercise a
+  View Transition, so the component test covers the reset but not the persisted-island landing.
+
 ## Chore #94 — Brand rename: Solar Time → Solar Drift
 
 - **Date:** 2026-07-08
