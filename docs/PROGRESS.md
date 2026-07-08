@@ -6,6 +6,27 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix #96 — Firebase preview-channel quota exhausted (429 on every PR)
+
+- **Date:** 2026-07-08
+- **PRs:** #99 + #100 (merged) · **Issue:** #96 (closed) · **Risk:** R-015 (resolved)
+- **What:** Per-PR Firebase preview channels on `solar-time-stage` were created with `expires: 7d`
+  and **never deleted on PR close**, so within any 7-day window the accumulated `pr*` channels hit
+  the per-site quota → `429 RESOURCE_EXHAUSTED` on every same-repo PR's preview deploy.
+- **Fix (4 parts):**
+  1. `ci.yml`: TTL `expires 7d → 2d` (self-reclaim backstop).
+  2. `ci.yml`: `continue-on-error` on the preview **deploy step** — an infra preview failure no
+     longer paints the run red, but a genuine build regression still fails the job.
+  3. New `preview-cleanup.yml` (separate file so `ci.yml`'s required `Checks` context is untouched)
+     — one `reclaim` job: on `pull_request: closed` deletes the PR's channel by `pr<N>-` prefix
+     (never guesses the truncated suffix); on `workflow_dispatch` prunes **all** `pr*` channels via
+     the same `FIREBASE_SERVICE_ACCOUNT_STAGE` SA — no local Firebase login needed.
+  4. One-time prune dispatched post-merge cleared **50 stale channels**; #100 then got a healthy
+     preview channel again (state `CLEAN`, no 429) — first green preview since the outage.
+- **Gotcha:** the reclaim job needs `actions/checkout` (firebase channel ops require `firebase.json`);
+  #99 shipped without it and failed silently (the `--json` redirect hid the error), fixed in #100.
+- **Scope:** `.github/workflows/` only — no app/site code touched; `Checks` gate unaffected throughout.
+
 ## Fix #78 — Keep the unit on the number's baseline on the OG share card
 
 - **Date:** 2026-07-07
