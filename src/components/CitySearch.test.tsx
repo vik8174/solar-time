@@ -51,6 +51,22 @@ describe('CitySearch', () => {
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ slug: 'prague' }));
   });
 
+  it('closes the listbox and clears the field after selecting a city', async () => {
+    const user = userEvent.setup();
+    const { onSelect } = renderSearch();
+
+    const input = screen.getByRole<HTMLInputElement>('combobox');
+    await user.type(input, 'Prague');
+    await user.click(await screen.findByRole('option', { name: /Prague/ }));
+
+    // The persisted island must arrive on the destination empty and closed:
+    // no listbox, and the combobox value reset to ''.
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(input.value).toBe('');
+    // Reset must not swallow the selection callback (native-nav path parity).
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ slug: 'prague' }));
+  });
+
   it('selects the highlighted suggestion with the keyboard (Enter)', async () => {
     const user = userEvent.setup();
     const { onSelect } = renderSearch();
@@ -61,6 +77,21 @@ describe('CitySearch', () => {
     await user.keyboard('{Enter}');
 
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ slug: 'prague' }));
+  });
+
+  it('closes and clears after an Enter selection too (keyboard path parity)', async () => {
+    const user = userEvent.setup();
+    renderSearch();
+
+    // Enter routes through the active link's `.click()`, a different entry into
+    // `selectCity` than a pointer click — guard that it resets state identically.
+    const input = screen.getByRole<HTMLInputElement>('combobox');
+    await user.type(input, 'Prague');
+    await screen.findByRole('option', { name: /Prague/ });
+    await user.keyboard('{Enter}');
+
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(input.value).toBe('');
   });
 
   it('moves the active option with arrow keys before selecting', async () => {
@@ -157,6 +188,30 @@ describe('CitySearch', () => {
     await user.keyboard('{Escape}');
 
     expect(input.value).toBe('');
+  });
+
+  it('does not render the clear button while the query is empty', () => {
+    renderSearch();
+
+    expect(screen.queryByRole('button', { name: /clear search/i })).toBeNull();
+  });
+
+  it('reveals the clear button, clears the field and keeps focus on click', async () => {
+    const user = userEvent.setup();
+    renderSearch();
+
+    const input = screen.getByRole<HTMLInputElement>('combobox');
+    await user.type(input, 'Prague');
+    await screen.findByRole('listbox');
+
+    const clear = screen.getByRole('button', { name: /clear search/i });
+    await user.click(clear);
+
+    // Field emptied, list gone (no results for '') and the caret stays put so
+    // the user can immediately retype.
+    expect(input.value).toBe('');
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(document.activeElement).toBe(input);
   });
 
   it('shows alt names as hints in the option label', async () => {

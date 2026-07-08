@@ -81,6 +81,7 @@ export default function CitySearch({
   const [activeIndex, setActiveIndex] = useState(0);
   const [open, setOpen] = useState(false);
   const optionRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   // Load + build the fuzzy index once, after hydration. A failed load is logged
   // and leaves the box inert rather than throwing an unhandled rejection.
@@ -104,16 +105,25 @@ export default function CitySearch({
   const showList = open && results.length > 0;
   const showEmpty = open && index !== null && trimmed !== '' && results.length === 0;
 
+  const clearQuery = (): void => {
+    setQuery('');
+    setActiveIndex(0);
+  };
+
   const selectCity = (city: SearchCity): void => {
     // Anonymous "a city was chosen" event — just the slug, no personal data
     // (D-008). The event is buffered until analytics boots and survives the
     // ensuing View-Transition navigation (same JS context).
     trackEvent('city_selected', { slug: city.slug });
-    if (onSelect) {
-      onSelect(city);
-      setOpen(false);
-    }
-    // Otherwise the <a> navigates natively (ClientRouter → View Transition).
+    onSelect?.(city);
+    // Close + clear on BOTH paths: the injected-`onSelect` test path and the
+    // native `<a>` nav. The header is `transition:persist`, so this same island
+    // is carried to `/{slug}` — resetting here lands it empty and closed instead
+    // of arriving with a stale, open dropdown (#79). Setting state right before
+    // the link's default navigation is safe: state updates are async and don't
+    // cancel the click's navigation.
+    setOpen(false);
+    clearQuery();
   };
 
   const onKeyDown = (event: TargetedKeyboardEvent<HTMLInputElement>): void => {
@@ -152,30 +162,53 @@ export default function CitySearch({
         if (!(next instanceof Node) || !event.currentTarget.contains(next)) setOpen(false);
       }}
     >
-      <input
-        type="text"
-        className="city-search__input"
-        role="combobox"
-        aria-label="Search cities"
-        aria-expanded={showList}
-        aria-controls={LISTBOX_ID}
-        aria-autocomplete="list"
-        aria-activedescendant={showList ? optionId(activeIndex) : undefined}
-        autoComplete="off"
-        placeholder="Search a city…"
-        value={query}
-        onInput={(event) => {
-          // Preact fires `onInput` per keystroke (its `onChange` is the native,
-          // on-commit event — unlike React). `currentTarget` is the typed input.
-          setQuery(event.currentTarget.value);
-          setActiveIndex(0);
-          setOpen(true);
-        }}
-        onFocus={() => {
-          setOpen(true);
-        }}
-        onKeyDown={onKeyDown}
-      />
+      <div className="city-search__field">
+        <input
+          ref={inputRef}
+          type="text"
+          className="city-search__input"
+          role="combobox"
+          aria-label="Search cities"
+          aria-expanded={showList}
+          aria-controls={LISTBOX_ID}
+          aria-autocomplete="list"
+          aria-activedescendant={showList ? optionId(activeIndex) : undefined}
+          autoComplete="off"
+          placeholder="Search a city…"
+          value={query}
+          onInput={(event) => {
+            // Preact fires `onInput` per keystroke (its `onChange` is the native,
+            // on-commit event — unlike React). `currentTarget` is the typed input.
+            setQuery(event.currentTarget.value);
+            setActiveIndex(0);
+            setOpen(true);
+          }}
+          onFocus={() => {
+            setOpen(true);
+          }}
+          onKeyDown={onKeyDown}
+        />
+
+        {query !== '' && (
+          <button
+            type="button"
+            className="city-search__clear"
+            aria-label="Clear search"
+            // `onMouseDown` preventDefault stops the button from stealing focus,
+            // so the `focusout` close never fires and the caret stays in the input.
+            // The ref re-focus is a belt-and-suspenders guarantee for a11y.
+            onMouseDown={(event) => {
+              event.preventDefault();
+            }}
+            onClick={() => {
+              clearQuery();
+              inputRef.current?.focus();
+            }}
+          >
+            ×
+          </button>
+        )}
+      </div>
 
       {showList && (
         <ul className="city-search__listbox" id={LISTBOX_ID} role="listbox" aria-label="Cities">
