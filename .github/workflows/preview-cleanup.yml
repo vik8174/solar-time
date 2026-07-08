@@ -1,0 +1,127 @@
+name: Preview channel cleanup
+
+# Reclaims Firebase Hosting preview channels on solar-time-stage so the
+# per-site channel quota can't fill up (was causing 429 RESOURCE_EXHAUSTED on
+# every PR's preview deploy — see #96 / R-015).
+#
+# This lives in its OWN workflow file on purpose: it must never touch the
+# required "Checks" status context that ci.yml reports. ci.yml keeps its exact
+# trigger surface (open / synchronize / reopen) and this file only ever runs on
+# PR close or a manual dispatch — so the `ci` and `preview` jobs cannot run
+# here, and branch protection is unaffected.
+on:
+  # Reclaim a PR's channel the moment it closes (merged or not).
+  pull_request:
+    types: [closed]
+  # Manual full prune of stale pr* channels — the coordinator runs this once
+  # after merge to unblock the quota without a local Firebase login:
+  #   gh workflow run preview-cleanup.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialize channel mutations on the shared site so a full prune and a
+# per-PR cleanup can't race each other's list/delete.
+concurrency:
+  group: preview-cleanup-solar-time-stage
+  cancel-in-progress: false
+
+env:
+  FIREBASE_PROJECT: solar-time-stage
+  # Pinned per exact-versions; bump deliberately.
+  FIREBASE_TOOLS_VERSION: 13.29.1
+
+jobs:
+  # Delete the closed PR's preview channel(s). Skipped for fork PRs: forks don't
+  # receive repo secrets, so the service-account credential would be empty.
+  cleanup:
+    name: Delete closed PR channel
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install firebase-tools
+        run: npm install -g firebase-tools@"$FIREBASE_TOOLS_VERSION"
+
+      - name: Write service-account credential
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGE }}
+        run: printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+
+      - name: Delete channel(s) for PR #${{ github.event.number }}
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+          PR: ${{ github.event.number }}
+        run: |
+          set -euo pipefail
+
+          # The action-hosting-deploy channelId is `pr<N>-<sanitized-branch>`
+          # (the suffix may be truncated), so we never guess the full id — we
+          # list channels and match the `pr<N>-` prefix. Anchored with a
+          # trailing `-`/end so pr9 never matches pr93.
+          firebase hosting:channel:list \
+            --project "$FIREBASE_PROJECT" --json > channels.json
+
+          ids="$(jq -r '.result.channels[].name | split("/") | last' channels.json \
+            | grep -E "^pr${PR}(-|$)" || true)"
+
+          if [ -z "$ids" ]; then
+            echo "No preview channel found for PR #${PR} — nothing to delete."
+            exit 0
+          fi
+
+          echo "$ids" | while IFS= read -r id; do
+            [ -n "$id" ] || continue
+            echo "Deleting channel: $id"
+            # Tolerate an already-expired/gone channel (idempotent cleanup).
+            firebase hosting:channel:delete "$id" \
+              --project "$FIREBASE_PROJECT" --force \
+              || echo "::warning::delete failed or channel already gone: $id"
+          done
+
+  # Manual full prune: list every pr* channel and delete it. Channels for still-
+  # open PRs are regenerated on their next push, so this safely reclaims the
+  # whole quota in one shot. workflow_dispatch is restricted to users with repo
+  # write access, so secrets are available and there is no fork concern.
+  prune:
+    name: Prune all pr* channels
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install firebase-tools
+        run: npm install -g firebase-tools@"$FIREBASE_TOOLS_VERSION"
+
+      - name: Write service-account credential
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STAGE }}
+        run: printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+
+      - name: List and delete stale pr* channels
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: |
+          set -euo pipefail
+
+          firebase hosting:channel:list \
+            --project "$FIREBASE_PROJECT" --json > channels.json
+
+          ids="$(jq -r '.result.channels[].name | split("/") | last' channels.json \
+            | grep -E '^pr[0-9]+(-|$)' || true)"
+
+          if [ -z "$ids" ]; then
+            echo "No pr* preview channels found — quota already clear."
+            exit 0
+          fi
+
+          echo "Pruning the following channels:"
+          echo "$ids"
+
+          echo "$ids" | while IFS= read -r id; do
+            [ -n "$id" ] || continue
+            echo "Deleting channel: $id"
+            firebase hosting:channel:delete "$id" \
+              --project "$FIREBASE_PROJECT" --force \
+              || echo "::warning::delete failed or channel already gone: $id"
+          done
