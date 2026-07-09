@@ -204,7 +204,9 @@ const meta = seoMeta({ name: city.name, slug: city.slug }, deviation);
       display: flex;
       justify-content: center;
       align-items: flex-start;
-      padding: var(--page-pad-y) var(--page-pad-x);
+      /* Symmetric page frame, but a tighter bottom so the gap down to the
+         support note / footer joins the --space-section rhythm (fix #83). */
+      padding: var(--page-pad-y) var(--page-pad-x) var(--space-section);
     }
     .content {
       width: 100%;
@@ -217,10 +219,10 @@ const meta = seoMeta({ name: city.name, slug: city.slug }, deviation);
       text-transform: uppercase;
       color: var(--muted);
       text-align: center;
-      margin: 0 0 24px;
+      margin: 0 0 var(--space-lg);
     }
     .share {
-      margin: 36px auto 0;
+      margin: var(--space-section) auto 0;
       text-align: center;
     }
     .share-button {
@@ -243,7 +245,7 @@ const meta = seoMeta({ name: city.name, slug: city.slug }, deviation);
     }
     .share-status {
       display: block;
-      margin-top: 12px;
+      margin-top: var(--space-sm);
       min-height: 1em;
       font-family: var(--mono);
       font-size: 12px;

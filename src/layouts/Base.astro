@@ -188,7 +188,7 @@ const ogImage = ogImagePath && site ? new URL(ogImagePath, site).href : undefine
 
 <style>
   .site-header {
-    padding: 16px var(--page-pad-x) 0;
+    padding: var(--space-md) var(--page-pad-x) 0;
   }
 
   .support {
@@ -196,7 +196,7 @@ const ogImage = ogImagePath && site ? new URL(ogImagePath, site).href : undefine
     align-items: center;
     justify-content: center;
     gap: 8px;
-    margin: 0 auto 8px;
+    margin: 0 auto var(--space-xs);
     padding: 0 var(--page-pad-x);
     text-align: center;
   }
@@ -232,7 +232,7 @@ const ogImage = ogImagePath && site ? new URL(ogImagePath, site).href : undefine
   }
 
   .site-footer {
-    padding: 24px var(--page-pad-x) 32px;
+    padding: var(--space-md) var(--page-pad-x) var(--space-xl);
     text-align: center;
   }
   .footer-links {
@@ -269,7 +269,7 @@ const ogImage = ogImagePath && site ? new URL(ogImagePath, site).href : undefine
     }
   }
   .footer-credit {
-    margin: 12px 0 0;
+    margin: var(--space-sm) 0 0;
     font-size: 11px;
     color: var(--muted-dim);
   }
