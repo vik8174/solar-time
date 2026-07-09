@@ -6,6 +6,41 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix #83 — Vertical spacing scale + consistent section rhythm
+
+- **Date:** 2026-07-09
+- **PR:** #107 (merged) · **Issue:** #83 (closed)
+- **What:** The lower half of the city + home pages read as disjointed fragments — every stacked
+  section set its own unrelated magic-number margin (40 / 36 / 24 / 16 / 12 / 8 / 32px), so the
+  gaps didn't relate to each other. There was **no spacing scale** in `tokens.css`. Added one and
+  applied it so the TOTAL → Share → support → footer flow reads as one coherent rhythm.
+- **Scale (extends D-006 SSOT, no new ADR):** a small stepped scale on a 4px baseline —
+  `--space-xs 8 / sm 12 / md 16 / lg 24 / xl 32` — plus **one** fluid token
+  `--space-section: clamp(var(--space-lg), 6vw, var(--space-xl))` (24→32) for the single
+  inter-section gap, mirroring the existing `--page-pad-*` clamp approach. Six tokens, each used
+  ≥1× (no over-tokenization / YAGNI). Horizontal flex gaps and intra-control spacing (row/button
+  padding, 2–4px label nudges) deliberately left out of scope — the ticket is **inter-section**.
+- **Three oversized gaps tightened + unified into one 24–32px band:**
+  - **TOTAL → Share/geo:** 36–40px → `--space-section` (`.share` / `.geo` / `.breakdown` top).
+  - **Share → support:** 40px (page frame) → `--space-section` via the `.page` **bottom** padding
+    (the "page side" — top still uses `--page-pad-y`, so the frame stays symmetric-ish and the
+    slice-#13 layout token is untouched).
+  - **support → footer:** 8 + 24 = 32px → 8 + 16 = 24px (footer **top** padding 24→16, `--space-md`).
+- **Scope — CSS/visual only:** `tokens.css`, `Breakdown.astro`, `[city].astro`, `index.astro`,
+  `Base.astro`. No domain / analytics / `src/lib` change → the D-012 coverage gate is unaffected
+  (no new unit tests — correct for CSS). Landed clean with no overlapping work in flight; **unblocks
+  #82 (landing) + #80 (wordmark)**, which now build on the scale instead of re-introducing magics.
+- **Verify:** gate green (typecheck / lint / format / test:coverage 292 tests / build). Eyeballed on
+  the dev preview in **both themes** (spacing is theme-independent; the light `@media` block only
+  redefines colors) at **375 / 768 / 1280** — `--space-section` resolves 24 (375) → 32 (≥533px);
+  no horizontal scroll; desktop not regressed (36/40→32 is the intended tightening); `/privacy`
+  footer not regressed (support aside off there, D-008; footer spacing applies). code-reviewer →
+  **PASS** (0 issues ≥75 — naming/consistency/correctness/YAGNI all clean). Squash commit `307cdd3`.
+- **Infra note:** the non-required `PR preview deploy` first went red — GitHub never acquired a
+  hosted runner ("job was not acquired by Runner … even after multiple attempts"), a transient
+  Actions runner-availability flake, **not** the change. `gh run rerun --failed` cleared it; the
+  required `Checks` context was green throughout.
+
 ## Fix #79 — Search: close + clear on select, add a clear (×) button
 
 - **Date:** 2026-07-08
