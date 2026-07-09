@@ -42,6 +42,12 @@ order before opening a PR:
 The `docs/` update ships **in the same PR as the change** — not a separate journal
 PR. Run `npx prettier --write docs/*.md` before pushing (Prettier is in the gate).
 
+**Fill the real PR number in the `docs/` entry.** The entry is written before
+`gh pr create`, so the number isn't known yet — write `_pending_`, then once the PR
+exists replace it with `#<N> (merged) · **Issue:** #<M> (closed)` and **push to the
+same branch** (still one PR, one extra push). Don't leave `_pending_` in a merged
+entry — that's exactly the drift the single-PR flow exists to prevent.
+
 ## Enforced automatically
 
 Stages 1–4 are wired into a committed **`pre-push` git hook**

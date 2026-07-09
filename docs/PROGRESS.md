@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Feature #80 — Home-linking "Solar Drift" brand wordmark in the header
 
 - **Date:** 2026-07-09
-- **PR:** _pending_ · **Issue:** #80
+- **PR:** #110 (merged) · **Issue:** #80 (closed)
 - **What:** From `/privacy` and any `/[city]` there was **no in-page way back to `/`** — the header
   held only the search island; the footer is `Privacy · Feedback · Support`. Added a home-linking
   **"Solar Drift" wordmark** (the standard click-logo-to-home pattern), which also gives the live
