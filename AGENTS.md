@@ -8,7 +8,10 @@ agent session from a clean context.
   - [`docs/PROGRESS.md`](docs/PROGRESS.md) — what shipped per slice
   - [`docs/DECISIONS.md`](docs/DECISIONS.md) — decisions + assumptions (do not break the SSOT contracts)
   - [`docs/RISKS.md`](docs/RISKS.md) — open problems and things to watch
-- **When a slice merges**, update `docs/` (append progress, record any new decision/risk).
+- **Ship the docs with the change** — the worker updates `docs/` (append the
+  `PROGRESS.md` entry, and record any new decision/risk in `DECISIONS.md`/`RISKS.md`)
+  **in the same PR as the code**, not a separate journal PR. The coordinator reviews
+  that entry as part of gating the single PR (HITL, R-004).
   Keep handoffs disposable; durable knowledge goes in `docs/`.
 
 ## Development
