@@ -32,6 +32,28 @@
   --page-pad-x: clamp(16px, 5vw, 20px);
   --page-pad-y: clamp(28px, 8vw, 40px);
   --tap-min: 44px; /* minimum touch hit area on mobile (WCAG 2.5.5) */
+
+  /*
+   * vertical spacing scale (fix #83) — SSOT for the inter-section rhythm.
+   *
+   * A small, purposeful stepped scale on a 4px baseline: every stacked gap
+   * references one of these instead of an ad-hoc magic number, so related
+   * things sit close and section breaks share one consistent gap.
+   *   --space-xs  8px   tight — inside a control group (e.g. support note)
+   *   --space-sm 12px   secondary-text gap under a control
+   *   --space-md 16px   region padding (header / footer top)
+   *   --space-lg 24px   label ↔ content (eyebrow → hero)
+   *   --space-xl 32px   end-of-page breathing (footer bottom)
+   * --space-section is the single fluid gap between stacked sections; it
+   * clamps 24→32 for a 375→desktop feel (mirrors the --page-pad-* approach)
+   * and deliberately sits below the old 36/40 values to tighten the rhythm.
+   */
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-section: clamp(var(--space-lg), 6vw, var(--space-xl));
 }
 
 @media (prefers-color-scheme: light) {
