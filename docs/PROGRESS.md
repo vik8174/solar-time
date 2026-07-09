@@ -6,6 +6,39 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Feature #80 — Home-linking "Solar Drift" brand wordmark in the header
+
+- **Date:** 2026-07-09
+- **PR:** _pending_ · **Issue:** #80
+- **What:** From `/privacy` and any `/[city]` there was **no in-page way back to `/`** — the header
+  held only the search island; the footer is `Privacy · Feedback · Support`. Added a home-linking
+  **"Solar Drift" wordmark** (the standard click-logo-to-home pattern), which also gives the live
+  header the brand identity it lacked and keeps it consistent with the OG card wordmark.
+- **Brand string:** the wordmark reads **"Solar Drift"**, not "Solar Time". Issue #80 predates the
+  rename (#94) and its text says "Solar Time" throughout — the live brand is "Solar Drift"
+  (`Base.astro` `og:site_name`, OG card), so the wordmark matches the code, not the stale ticket.
+- **Layout — centered wordmark above the search:** a real `<a href="/">` placed **inside** the
+  `<header transition:persist>` (persists across View Transitions like the rest of the header),
+  above `<CitySearch>`. Centered to match the site's existing centered rhythm (search is a centered
+  480px column; footer links are `justify-content: center`). `inline-flex` so **only the text** is
+  the click target (no dead-whitespace navigation). Mono family (`--mono`) to match the OG wordmark
+  and the `h2` headings; the wordmark↔search gap uses the #83 spacing scale (`--space-sm`), not a
+  magic number.
+- **a11y:** `aria-current="page"` on the home page only (`Astro.url.pathname === '/'`); on mobile
+  (`@media max-width: 480px`) a **44px tap target** via `min-height: var(--tap-min)`, mirroring the
+  proven `.footer-links` pattern. Not an `<h1>` — the home hero owns the page heading; this is a
+  nav link.
+- **Scope — markup + CSS only:** `src/layouts/Base.astro` (markup + its `<style>`) only. No
+  `tokens.css` change needed (reused #83's scale + slice-#13's `--tap-min`). No domain / analytics
+  / `src/lib` change → the D-012 coverage gate is unaffected (no new unit tests — correct for
+  markup/CSS).
+- **Verify:** gate green (typecheck / lint / format:check / test:coverage 292 tests). Verified on
+  the dev preview in **both themes** at **375 / 768 / 1280** across **home / `/[city]` (prague) /
+  `/privacy`**: no horizontal scroll anywhere; wordmark centered above a usable search; tap target
+  = 44px at ≤480px, natural height (min-height auto) on desktop; `aria-current="page"` present on
+  home, absent elsewhere; the anchor resolves to `/` and clicking it from `/privacy` and `/prague`
+  returns to `/`. Desktop layout otherwise unchanged apart from the added wordmark.
+
 ## Fix #83 — Vertical spacing scale + consistent section rhythm
 
 - **Date:** 2026-07-09

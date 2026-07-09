@@ -87,6 +87,13 @@ const ogImage = ogImagePath && site ? new URL(ogImagePath, site).href : undefine
   </head>
   <body data-analytics-env={ANALYTICS_ENV}>
     <header class="site-header" transition:persist>
+      <a
+        class="site-wordmark"
+        href="/"
+        aria-current={Astro.url.pathname === '/' ? 'page' : undefined}
+      >
+        Solar Drift
+      </a>
       <CitySearch client:idle />
     </header>
     <slot />
@@ -188,7 +195,29 @@ const ogImage = ogImagePath && site ? new URL(ogImagePath, site).href : undefine
 
 <style>
   .site-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     padding: var(--space-md) var(--page-pad-x) 0;
+  }
+  /*
+   * Home-linking brand wordmark (nav link, not a heading — the home hero owns
+   * the <h1>). inline-flex so only the text is the click target (no dead
+   * whitespace nav); centered by the header column to match the site's rhythm.
+   * Gap to the search uses the #83 spacing scale, not a magic number.
+   */
+  .site-wordmark {
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: var(--space-sm);
+    font-family: var(--mono);
+    font-size: 15px;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .site-wordmark:hover {
+    color: var(--accent);
   }
 
   .support {
@@ -252,8 +281,11 @@ const ogImage = ogImagePath && site ? new URL(ogImagePath, site).href : undefine
     color: var(--accent);
   }
 
-  /* Mobile: give the footer links and the dismiss control a real touch area. */
+  /* Mobile: give the wordmark, footer links and dismiss control a real touch area. */
   @media (max-width: 480px) {
+    .site-wordmark {
+      min-height: var(--tap-min);
+    }
     .footer-links {
       gap: 6px 12px;
     }
