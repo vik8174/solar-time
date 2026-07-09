@@ -28,15 +28,19 @@ Local checks run **cheapest-first**, so a fast failure (a type error, a lint
 nit) stops you before you spend time on the slower stages. Run them in this
 order before opening a PR:
 
-| #   | Stage       | Command                 | Notes                                |
-| --- | ----------- | ----------------------- | ------------------------------------ |
-| 1   | Typecheck   | `npm run typecheck`     | `astro check`                        |
-| 2   | Lint        | `npm run lint`          | ESLint                               |
-| 3   | Prettier    | `npm run format:check`  | `npm run format` to auto-fix         |
-| 4   | Tests + cov | `npm run test:coverage` | Enforces coverage thresholds (below) |
-| 5   | QA          | `qa` agent              | Audit coverage gaps, edge cases      |
-| 6   | Code review | `code-reviewer` agent   | Before the PR                        |
-| 7   | PR          | `gh pr create`          | Coordinator gates the merge (HITL)   |
+| #   | Stage       | Command                 | Notes                                                              |
+| --- | ----------- | ----------------------- | ------------------------------------------------------------------ |
+| 1   | Typecheck   | `npm run typecheck`     | `astro check`                                                      |
+| 2   | Lint        | `npm run lint`          | ESLint                                                             |
+| 3   | Prettier    | `npm run format:check`  | `npm run format` to auto-fix                                       |
+| 4   | Tests + cov | `npm run test:coverage` | Enforces coverage thresholds (below)                               |
+| 5   | QA          | `qa` agent              | Audit coverage gaps, edge cases                                    |
+| 6   | Code review | `code-reviewer` agent   | Before the PR                                                      |
+| 7   | Docs        | edit `docs/`            | `PROGRESS.md` entry (+ DECISIONS/RISKS if any) **in this same PR** |
+| 8   | PR          | `gh pr create`          | One PR = code + docs; coordinator gates the merge (HITL)           |
+
+The `docs/` update ships **in the same PR as the change** — not a separate journal
+PR. Run `npx prettier --write docs/*.md` before pushing (Prettier is in the gate).
 
 ## Enforced automatically
 

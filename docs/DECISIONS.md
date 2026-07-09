@@ -70,6 +70,13 @@ state and passes work via handoffs. Handoffs are throwaway (`../handoffs/`, git-
 durable history lives in these committed docs. **Each session works in its own
 `git worktree` off `main`** — never two sessions on one working tree (see R-008).
 
+**Amendment (2026-07-09):** the worker ships the `docs/` update (the `PROGRESS.md` entry
+plus any `DECISIONS.md`/`RISKS.md` change) **in the same PR as the code** — the
+coordinator reviews it while gating that single PR and no longer opens a separate
+post-merge journal PR. Keeps the journal from drifting from the code and halves merge
+overhead. (Superseded the two-PR split used through #79/#83. Coordinator-only doc
+chores with no associated ticket may still use a standalone chore-PR.)
+
 ## D-010 — TypeScript `strictest` preset · accepted
 
 `tsconfig.json` extends `astro/tsconfigs/strictest` (not `strict`). Turns on the full
