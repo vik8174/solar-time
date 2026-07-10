@@ -295,3 +295,42 @@ pick up prod keys. **Secrets hygiene:** `.gitignore` covers `.env` + `.env.*` wi
 (exact devDep). **Assumption:** all client keys stay `PUBLIC_*` (inlined, non-secret — Firebase web
 config + Sentry DSN are safe to expose); a truly-secret key would need a different channel (CI
 secret, not `.env.prod`). Adopted with the prod-env-delivery chore (PR #65).
+
+## D-024 — `country` resolved at build, alt-name shown only on an alt-match · accepted
+
+Search rows defaulted their secondary label to the first alt-name (#43), which reads as cryptic
+noise (`Prague · Praag`). **Decision:** the secondary label is the **country**; the matched alt is
+shown **only when the match actually came via an alt**.
+
+**Where country comes from.** `geonames.ts` already parses `countryCode`; it was dropped at the
+`toCities` projection. It is now resolved to an **English country name at build time** by the pure
+helper `resolveCountryName` (`scripts/citySlug.ts`) using the built-in
+`Intl.DisplayNames(['en'], { type: 'region', fallback: 'none' })` — no new dependency — and the
+**resolved name is stored** in `cities.json` (static and review-friendly; nothing resolves at
+render). **Unknown ⇒ absent, never a placeholder:** the field is omitted entirely (helped by
+`exactOptionalPropertyTypes`, so `undefined` is not assignable), so the UI renders no country and
+no dangling `·`. Three unresolvable shapes, all → `undefined`:
+
+- **empty** code (some dump rows carry none);
+- **structurally invalid** code — `.of()` throws `RangeError` (e.g. `"1"`, `"E"`);
+- **well-formed but unassigned** — `fallback: 'none'` returns `undefined` (e.g. `"XX"`, `"AA"`).
+
+**The `ZZ` trap (why `fallback: 'none'` is not enough).** `ZZ` is the ISO 3166-1 "unknown or
+unspecified" sentinel, but CLDR defines it as a real territory whose English display name is the
+literal string **`"Unknown Region"`**. So `.of('ZZ')` returns a _name_, not `undefined`, and the
+obvious "did `.of` echo the code back?" check does **not** catch it. `ZZ` is therefore rejected by
+an explicit code guard. Do not "simplify" that guard away.
+
+**Alt-match provenance.** Fuse runs with `includeMatches: true`; `searchCities` returns
+`CityMatch[]` (`{ city, matchedAlt? }`), not `SearchCity[]`. `matchedAlt` is set **only when the
+result carries no `name` key** among its matches — a canonical-name hit is self-explanatory and
+falls back to the country. When one query matches several alts, the alt **equal to the query** is
+preferred (typing `Praha` must not surface `Praag`); ties fall back to the lowest `refIndex`, so
+the pick stays deterministic.
+
+**Payload (amends D-016's "weigh new attributes against payload size").** Country names are short:
+the lean search index grows **43.2 → 46.7 KB gzip (+3.5 KB)** across 1084 cities. Accepted — the
+disambiguation is exactly what D-016's consumer needs, and it becomes load-bearing once #90 scales
+the dataset (multiple "Springfield", "San José"). **Invariant kept from #43:** the option's
+accessible name is the city alone (`aria-label`); country/alt are decorative `aria-hidden` hints.
+Adopted with feature #91.

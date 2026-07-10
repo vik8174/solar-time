@@ -10,10 +10,15 @@ import { getViteConfig } from 'astro/config';
  * `src/data` is excluded on purpose — it holds generated tables (e.g.
  * `cities.ts`) that are rewritten wholesale by data slices and carry no
  * hand-written logic to test.
+ *
+ * Build-time `scripts/` (the dataset generator) is included in the test *run*
+ * so its pure helpers (`geonames`, `citySlug`) are actually verified, but it is
+ * kept out of `coverage.include` — it is generator glue, not shipped app logic,
+ * so it isn't held to the app's coverage thresholds.
  */
 export default getViteConfig({
   test: {
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'scripts/**/*.{test,spec}.{ts,tsx}'],
     coverage: {
       provider: 'v8',
       include: ['src/lib/**/*.ts', 'src/domain/**/*.ts'],

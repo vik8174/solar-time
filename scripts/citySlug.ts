@@ -27,7 +27,52 @@ export interface City {
   altNames: readonly string[];
   /** Population — tie-breaker for zone resolution and search ranking. */
   population: number;
+  /**
+   * English country name for search disambiguation (e.g. "Spain"). Absent when
+   * the source code is empty/invalid/unknown — see {@link resolveCountryName}.
+   */
+  country?: string;
 }
+
+/**
+ * English region-name resolver, built once and shared across the projection.
+ * `fallback: 'none'` makes `.of` return `undefined` for a well-formed but
+ * unassigned code (e.g. "XX") instead of echoing the code back.
+ */
+const regionNames = new Intl.DisplayNames(['en'], { type: 'region', fallback: 'none' });
+
+/**
+ * ISO 3166-1 "unknown/unspecified" sentinel. CLDR *does* map it to a display
+ * name ("Unknown Region"), so `fallback: 'none'` alone won't reject it — guard
+ * it explicitly so we never surface a bogus "· Unknown Region" label.
+ */
+const UNKNOWN_REGION_CODE = 'ZZ';
+
+/**
+ * Resolves an ISO 3166-1 alpha-2 country code to its English display name at
+ * build time via the built-in `Intl.DisplayNames` (no dependency).
+ *
+ * Returns `undefined` for every "unknown" state — so the UI shows no country
+ * and never a dangling `·`: an empty code, the `ZZ` unknown-region sentinel, a
+ * structurally invalid code (`.of` throws `RangeError`), or a well-formed but
+ * unassigned code (`.of` returns `undefined` under `fallback: 'none'`, e.g.
+ * "XX"). Only a genuinely resolved name is returned.
+ *
+ * @param code - Raw ISO alpha-2 country code from the dump (may be empty).
+ * @returns The English country name, or `undefined` when it can't be resolved.
+ */
+export const resolveCountryName = (code: string): string | undefined => {
+  const normalized = code.trim().toUpperCase();
+  if (normalized === '' || normalized === UNKNOWN_REGION_CODE) return undefined;
+  try {
+    // `|| undefined` collapses both the `fallback: 'none'` undefined and any
+    // empty-string result to a single "unresolved" value.
+    return regionNames.of(normalized) || undefined;
+  } catch {
+    // RangeError for a structurally invalid code (e.g. "1", a single letter).
+    return undefined;
+  }
+};
 
 /**
  * Formats a lat/lon pair into the eyebrow string, e.g. "50.08°N, 14.44°E".
@@ -88,6 +133,9 @@ export const toCities = (records: readonly GeoNameRecord[]): City[] => {
     }
     used.add(slug);
 
+    // Spread `country` only when resolved — with exactOptionalPropertyTypes an
+    // optional field must be absent, not `undefined`. Absent → dropped from JSON.
+    const country = resolveCountryName(record.countryCode);
     cities.push({
       slug,
       name: record.name,
@@ -96,6 +144,7 @@ export const toCities = (records: readonly GeoNameRecord[]): City[] => {
       timeZone: record.timeZone,
       altNames: record.altNames,
       population: record.population,
+      ...(country !== undefined && { country }),
     });
   }
 

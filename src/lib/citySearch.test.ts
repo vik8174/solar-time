@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildCityIndex, normalizeText, searchCities, type SearchCity } from './citySearch';
+import {
+  buildCityIndex,
+  normalizeText,
+  searchCities,
+  type CityMatch,
+  type SearchCity,
+} from './citySearch';
 
 const city = (name: string, slug = name.toLowerCase(), altNames: string[] = []): SearchCity => ({
   slug,
@@ -16,8 +22,11 @@ const cities: readonly SearchCity[] = [
   city('Kashgar', 'kashgar', ['Kashi']),
 ];
 
+/** The matched cities of a query result, dropping match provenance. */
+const citiesOf = (results: readonly CityMatch[]): SearchCity[] => results.map((m) => m.city);
+
 const slugsFor = (query: string): string[] =>
-  searchCities(buildCityIndex(cities), query).map((c) => c.slug);
+  citiesOf(searchCities(buildCityIndex(cities), query)).map((c) => c.slug);
 
 describe('normalizeText', () => {
   it('converts to lowercase', () => {
@@ -104,9 +113,9 @@ describe('searchCities', () => {
   it('normalizes multiple diacritics correctly', () => {
     const zurich = city('Zürich', 'zurich', ['Zürich', 'Zurich']);
     // Query with umlaut, diacritic in alt names, all should match
-    expect(searchCities(buildCityIndex([zurich]), 'Zürich')).toContain(zurich);
-    expect(searchCities(buildCityIndex([zurich]), 'Zurich')).toContain(zurich);
-    expect(searchCities(buildCityIndex([zurich]), 'zurich')).toContain(zurich);
+    expect(citiesOf(searchCities(buildCityIndex([zurich]), 'Zürich'))).toContain(zurich);
+    expect(citiesOf(searchCities(buildCityIndex([zurich]), 'Zurich'))).toContain(zurich);
+    expect(citiesOf(searchCities(buildCityIndex([zurich]), 'zurich'))).toContain(zurich);
   });
 
   it('handles complex diacritics (cedilla, ring, tilde)', () => {
@@ -117,9 +126,9 @@ describe('searchCities', () => {
     ];
     const index = buildCityIndex(cities_special);
     // All should normalize and match without diacritics
-    expect(searchCities(index, 'Sao Paulo')).toContain(cities_special[0]);
-    expect(searchCities(index, 'Sotokken')).toContain(cities_special[1]);
-    expect(searchCities(index, 'Nino')).toContain(cities_special[2]);
+    expect(citiesOf(searchCities(index, 'Sao Paulo'))).toContain(cities_special[0]);
+    expect(citiesOf(searchCities(index, 'Sotokken'))).toContain(cities_special[1]);
+    expect(citiesOf(searchCities(index, 'Nino'))).toContain(cities_special[2]);
   });
 
   it('preserves ranking when multiple results have fuzzy matches', () => {
@@ -132,7 +141,7 @@ describe('searchCities', () => {
     const results = searchCities(index, 'new');
     // All three match 'new' but Fuse ranks by relevance; verify all are returned
     expect(results).toHaveLength(3);
-    expect(results.map((c) => c.slug)).toEqual(
+    expect(citiesOf(results).map((c) => c.slug)).toEqual(
       expect.arrayContaining(['new-york', 'new-delhi', 'newcastle']),
     );
   });
@@ -140,15 +149,15 @@ describe('searchCities', () => {
   it('tolerates leading and trailing whitespace in queries', () => {
     const index = buildCityIndex(cities);
     // Internal normalization trims whitespace
-    expect(searchCities(index, '  Prague  ')).toContain(cities[0]);
-    expect(searchCities(index, '\tMadrid\t')).toContain(cities[3]);
+    expect(citiesOf(searchCities(index, '  Prague  '))).toContain(cities[0]);
+    expect(citiesOf(searchCities(index, '\tMadrid\t'))).toContain(cities[3]);
   });
 
   it('returns results in a consistent order across repeated searches', () => {
     const index = buildCityIndex(cities);
     const results1 = searchCities(index, 'a');
     const results2 = searchCities(index, 'a');
-    expect(results1.map((c) => c.slug)).toEqual(results2.map((c) => c.slug));
+    expect(citiesOf(results1).map((c) => c.slug)).toEqual(citiesOf(results2).map((c) => c.slug));
   });
 
   it('does not match when typo tolerance is exceeded', () => {
@@ -163,7 +172,7 @@ describe('searchCities', () => {
     const results = searchCities(index, 'M');
     // Should match Madrid and Munich
     expect(results.length).toBeGreaterThan(0);
-    expect(results.some((c) => c.slug === 'madrid')).toBe(true);
+    expect(results.some((m) => m.city.slug === 'madrid')).toBe(true);
   });
 
   it('respects custom limit of 1', () => {
@@ -177,6 +186,46 @@ describe('searchCities', () => {
     const results = searchCities(index, 'Prague', 100);
     // Only Prague matches 'Prague' exactly (others have no match)
     expect(results).toHaveLength(1);
-    expect(results[0]!.slug).toBe('prague');
+    expect(results[0]!.city.slug).toBe('prague');
+  });
+});
+
+describe('searchCities — match provenance (#43)', () => {
+  const index = buildCityIndex(cities);
+
+  it('leaves matchedAlt unset for a canonical-name match', () => {
+    const [result] = searchCities(index, 'Madrid');
+    expect(result?.city.slug).toBe('madrid');
+    expect(result?.matchedAlt).toBeUndefined();
+  });
+
+  it('leaves matchedAlt unset when the name matches even if an alt also would', () => {
+    // "Munich" matches both its name and its alt "Muenchen"; the name wins, so
+    // the row defaults to the country rather than surfacing an alt.
+    const [result] = searchCities(index, 'Munich');
+    expect(result?.city.slug).toBe('munich');
+    expect(result?.matchedAlt).toBeUndefined();
+  });
+
+  it('surfaces the matched alt when the match came via an alternate name', () => {
+    const [result] = searchCities(index, 'Kiev');
+    expect(result?.city.slug).toBe('kyiv');
+    expect(result?.matchedAlt).toBe('Kiev');
+  });
+
+  it('surfaces the alt the user actually typed when several alts match', () => {
+    // "praha" fuzzy-matches Praag/Prag/Praha alike; showing "Praag" as the reason
+    // for a "Praha" query would be baffling — prefer the exact one.
+    const praha = city('Prague', 'prague', ['Praag', 'Prag', 'Praha']);
+    const [result] = searchCities(buildCityIndex([praha]), 'Praha');
+    expect(result?.matchedAlt).toBe('Praha');
+  });
+
+  it('returns the original-cased alt, not the normalized index form', () => {
+    // Query "munchen" matches Munich only via its alt "München" — the surfaced
+    // alt must be the original casing/diacritics, not the normalized "munchen".
+    const [result] = searchCities(index, 'munchen');
+    expect(result?.city.slug).toBe('munich');
+    expect(result?.matchedAlt).toBe('München');
   });
 });

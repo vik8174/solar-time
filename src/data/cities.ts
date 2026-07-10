@@ -31,6 +31,8 @@ export interface City {
   altNames: readonly string[];
   /** Population — tie-breaker for zone resolution and search ranking. */
   population: number;
+  /** English country name for search disambiguation (e.g. "Spain"); may be absent. */
+  country?: string;
 }
 
 /** All cities with a pre-rendered page. */

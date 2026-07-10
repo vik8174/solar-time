@@ -3,7 +3,7 @@
  * city registry. Pure and build-time: the `/search-index.json` endpoint maps
  * `CITIES` through this, and the island fetches the result lazily.
  *
- * Only `{ slug, name, altNames }` is kept. Search inherently needs *all* cities
+ * Only `{ slug, name, altNames, country }` is kept. Search inherently needs *all* cities
  * on the client (unlike the per-page deviation island, D-013), so the payload is
  * kept minimal by dropping everything search doesn't use — longitude, timeZone,
  * population, coords (ADR D-016).
@@ -14,8 +14,15 @@ import type { SearchCity } from './citySearch';
 /**
  * Projects the full registry onto the lean search index.
  *
+ * `country` is short (a name), so it stays within the lean-payload budget
+ * (D-016) while giving each result a disambiguating secondary label.
+ *
  * @param cities - The full city registry.
- * @returns One `{ slug, name, altNames }` entry per city.
+ * @returns One `{ slug, name, altNames, country }` entry per city.
  */
 export const toSearchIndex = (cities: readonly City[]): SearchCity[] =>
-  cities.map(({ slug, name, altNames }) => ({ slug, name, altNames }));
+  cities.map(({ slug, name, altNames, country }) =>
+    // Keep `country` absent (not `undefined`) when unresolved — exactOptional-
+    // PropertyTypes, and so JSON.stringify drops it and the payload stays lean.
+    country !== undefined ? { slug, name, altNames, country } : { slug, name, altNames },
+  );
