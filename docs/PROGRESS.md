@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Feature #91 — Search results show "City · Country" instead of a cryptic alt-name
 
 - **Date:** 2026-07-10
-- **PR:** _pending_ · **Issue:** #91
+- **PR:** #112 (merged) · **Issue:** #91 (closed)
 - **What:** Search rows showed `City · <alt-name>` where the second part was a cryptic
   exonym (from #43) — `Prague · Praag` reads as "strange text". Results now show
   **`City · Country`** (`Madrid · Spain`), and the matched alt appears **only when the match
