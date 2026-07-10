@@ -6,6 +6,48 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix #114 — Worktree `node_modules` symlink broke `astro dev` (island never hydrated)
+
+- **Date:** 2026-07-10
+- **PR:** _pending_ · **Issue:** #114 (closed)
+- **Symptom:** in a worktree from `scripts/ticket-worktree.sh` (R-008), `npm run dev` served `/`,
+  but the `CitySearch` island stayed inert markup. Console:
+  `[astro-island] Error hydrating /src/components/CitySearch.tsx` + a **403** on
+  `/@fs/…/solar-time/node_modules/@astrojs/preact/dist/client-dev.js`.
+- **Root cause:** the paved-path script (D-015) symlinks `node_modules` at the primary clone —
+  the symlink itself came later, in #37 / PR #38.
+  Two Vite defaults then collide: `resolve.preserveSymlinks: false` resolves deps to their **real**
+  path (inside the primary clone), while `server.fs.allow` defaults to the **project root** (the
+  worktree). The real paths sit outside it → the dev server 403s the island's renderer chunk.
+  It hid since #37 because `pre-push` and `astro build` resolve modules Node-side, where a symlink
+  is transparent — only the **dev server's** fs guard rejects it.
+- **Fix (option A — symlink preserved):** `astro.config.mjs` now widens
+  `vite.server.fs.allow` to the symlink's **real** `node_modules`, computed at config load via
+  `realpathSync`. No hardcoded paths. Two guards, both load-bearing:
+  - `allow` **replaces** Vite's default (`allow: raw?.fs?.allow ?? [workspaceRoot]`) rather than
+    extending it — so the **project root is listed too**, or the dev server would stop serving the
+    worktree's own `src/`.
+  - Returns `undefined` when `node_modules` is absent (fresh clone, pre-install) or is **not a
+    symlink** (primary clone, tested via `lstatSync().isSymbolicLink()`) — the `vite` key is then
+    **omitted entirely** and Vite runs on stock defaults. Verified: primary → `undefined`;
+    worktree → `[<worktree>, <primary>/node_modules]`.
+- **Why not the alternatives:** **B** (`preserveSymlinks: true`) risks a duplicate Preact instance
+  (broken hooks/context) and is hard-to-reverse; **C** (real `npm install` per worktree) throws away
+  the #37 win — the whole point of the symlink is an instant `pre-push` with no `firebase-tools`
+  re-download. A is machine-agnostic and a no-op outside a worktree.
+- **Verified in a fresh worktree** (not the primary clone — it _cannot_ reproduce this, its
+  `node_modules` is a real directory): renderer chunk `403 → 200`, own `src/` files still `200`,
+  typing a city (`Prague`, `Kyiv`) opens the suggestion `listbox`, browser console clean.
+  `pre-push` (typecheck/lint/format/coverage) still runs immediately with **no manual
+  `npm install`**. `npm run build` green. Primary clone re-verified unregressed.
+- **Workers can now trust `npm run dev` inside a worktree** — the warning that had to be pasted into
+  every recent handoff is retired.
+- **Also found:** the symlink makes every worktree share the primary clone's Vite dep-optimizer
+  cache (`node_modules/.vite`). Pre-existing, not introduced here — logged as **R-018**.
+- **Scope:** `astro.config.mjs` + `.claude/rules/dev-flow.md`. No app code, no `src/`, no tests
+  (the dev server's behaviour is the test; the coverage gate is untouched).
+- **Review:** code-reviewer → PASS.
+
 ## Feature #86 — JSON-LD structured data (WebSite, WebApplication, BreadcrumbList)
 
 - **Date:** 2026-07-10
@@ -46,7 +88,6 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
   headless session. Worth a manual paste from the PR preview before merge.
 - **`[city].astro` touched in frontmatter only** (a const + one `<Base>` attribute), so **#87**
   — which rewrites that page's body — rebases clean.
-- **Review:** code-reviewer → PASS.
 
 ## Chore #102 — Bump `actions/checkout` + `actions/setup-node` v4 → v5 (Node 20 EOL)
 

@@ -15,6 +15,14 @@ from the primary clone, or `npm install` as a fallback), and prints the path to
 `cd` into. The symlink makes the `pre-push` gate (below) run immediately — no
 manual `npm install` needed.
 
+`npm run dev` works inside a worktree. `astro.config.mjs` widens Vite's
+`server.fs.allow` to the symlink's real `node_modules` whenever `node_modules`
+is a symlink, so the dev server can serve dependencies that resolve outside the
+worktree root; without it the islands 403 and never hydrate (fix #114). In the
+primary clone the widening is skipped entirely and Vite's defaults apply.
+**Caveat:** all worktrees share one Vite dep-optimizer cache, so two dev servers
+running at once can invalidate each other — restart the affected one (R-018).
+
 This is enforced by a committed **`pre-commit` git hook**
 ([`.githooks/pre-commit`](../../.githooks/pre-commit), wired by the same
 `core.hooksPath` as `pre-push`): it hard-blocks a commit on `main`/`stage` or in
