@@ -6,6 +6,45 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Feature #91 — Search results show "City · Country" instead of a cryptic alt-name
+
+- **Date:** 2026-07-10
+- **PR:** _pending_ · **Issue:** #91
+- **What:** Search rows showed `City · <alt-name>` where the second part was a cryptic
+  exonym (from #43) — `Prague · Praag` reads as "strange text". Results now show
+  **`City · Country`** (`Madrid · Spain`), and the matched alt appears **only when the match
+  actually came via an alt** (`Praha` → `Prague · Praha`), preserving #43's "why did this row
+  match" value. Essential once #90 scales the dataset (duplicate names across countries).
+- **Build-time country resolution:** `countryCode` was already parsed by `geonames.ts` but
+  dropped at the `toCities` projection. New pure helper `resolveCountryName(code)` in
+  `scripts/citySlug.ts` resolves it with the built-in
+  `Intl.DisplayNames(['en'], { type: 'region', fallback: 'none' })` — no dependency. The
+  resolved **name** (not the code) is stored in `cities.json` (static, review-friendly).
+  Unresolvable → the field is **absent**, so the UI shows no country and never a dangling `·`.
+- **The `ZZ` trap:** `fallback: 'none'` returns `undefined` for unassigned codes (`XX`, `AA`),
+  but **`ZZ` is a real CLDR territory** that resolves to the string `"Unknown Region"`. A
+  self-echo check (`name === code`) does _not_ catch it. Guarded explicitly — see D-024.
+- **Alt-match detection:** Fuse now runs with `includeMatches: true`; `searchCities` returns
+  `CityMatch[]` (`{ city, matchedAlt? }`) instead of `SearchCity[]`. `matchedAlt` is set only
+  when the result carries **no `name` key** among its matches. When several alts match one
+  query (`praha` hits Praag/Prag/Praha), the alt **the user actually typed** wins; otherwise
+  the lowest `refIndex`, deterministically.
+- **a11y (#43 preserved):** the option's accessible name stays the city (`aria-label`); the
+  country/alt hint is a decorative `aria-hidden` span. Verified in the live DOM.
+- **Dormant tests woken up (important):** `vitest.config.ts` scoped `test.include` to `src/**`,
+  so **`scripts/*.test.ts` never ran** — `citySlug.test.ts` and `geonames.test.ts` were dead
+  weight. Added `scripts/**` to the run (still **out of `coverage.include`** — generator glue,
+  not shipped logic). Enabling them immediately exposed a **pre-existing wrong assertion** in
+  `citySlug.test.ts` (expected `springfield-10`; the colliding record correctly takes its own
+  id → `springfield-20`). Fixed the assertion, not the behavior. See R-017.
+- **Dataset regenerated:** `npm run build:cities`, deterministic (byte-identical on re-run),
+  1084 cities, **all 1084 resolve a country** (242 distinct). Upstream GeoNames drift came
+  along for the ride — see R-016. Search-index payload **43.2 → 46.7 KB gzip (+3.5 KB)**.
+- **Verify:** gate green (typecheck / lint / format:check / **328 tests**, coverage
+  100 stmts / 97.5 branches). Live dev preview in **both themes**: `Madrid · Spain`,
+  `Praha` → `Prague · Praha`, `Minhen` → `Munich · Minhen`, `Dunaj` → `Vienna · Dunaj`;
+  accessible name = city, hint `aria-hidden="true"`.
+
 ## Feature #80 — Home-linking "Solar Drift" brand wordmark in the header
 
 - **Date:** 2026-07-09

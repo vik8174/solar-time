@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatCoords, slugify, toCities } from './citySlug';
+import { formatCoords, resolveCountryName, slugify, toCities } from './citySlug';
 import type { GeoNameRecord } from './geonames';
 
 const record = (over: Partial<GeoNameRecord> = {}): GeoNameRecord => ({
@@ -26,6 +26,35 @@ describe('slugify', () => {
   });
 });
 
+describe('resolveCountryName', () => {
+  it('resolves a valid ISO alpha-2 code to its English name', () => {
+    expect(resolveCountryName('ES')).toBe('Spain');
+    expect(resolveCountryName('UA')).toBe('Ukraine');
+  });
+
+  it('is case-insensitive and trims surrounding whitespace', () => {
+    expect(resolveCountryName('es')).toBe('Spain');
+    expect(resolveCountryName('  de  ')).toBe('Germany');
+  });
+
+  it('returns undefined for an empty or whitespace code', () => {
+    expect(resolveCountryName('')).toBeUndefined();
+    expect(resolveCountryName('   ')).toBeUndefined();
+  });
+
+  it('returns undefined for a well-formed but unknown code (no "· ZZ")', () => {
+    // `.of` echoes the code back for an unassigned region — never surface it.
+    expect(resolveCountryName('ZZ')).toBeUndefined();
+    expect(resolveCountryName('XX')).toBeUndefined();
+  });
+
+  it('returns undefined for a structurally invalid code (RangeError)', () => {
+    expect(resolveCountryName('1')).toBeUndefined();
+    expect(resolveCountryName('E')).toBeUndefined();
+    expect(resolveCountryName('ESP!')).toBeUndefined();
+  });
+});
+
 describe('formatCoords', () => {
   it('formats north/east with hemisphere letters', () => {
     expect(formatCoords(50.088, 14.4208)).toBe('50.09°N, 14.42°E');
@@ -37,7 +66,7 @@ describe('formatCoords', () => {
 });
 
 describe('toCities', () => {
-  it('maps a record to the shipped City shape', () => {
+  it('maps a record to the shipped City shape, resolving the country name', () => {
     const [city] = toCities([
       record({
         name: 'Prague',
@@ -45,6 +74,7 @@ describe('toCities', () => {
         timeZone: 'Europe/Prague',
         altNames: ['Praha'],
         population: 1_165_000,
+        countryCode: 'CZ',
       }),
     ]);
     expect(city).toEqual({
@@ -55,7 +85,17 @@ describe('toCities', () => {
       timeZone: 'Europe/Prague',
       altNames: ['Praha'],
       population: 1_165_000,
+      country: 'Czechia',
     });
+  });
+
+  it('leaves country undefined for an empty or unknown country code', () => {
+    // Undefined → dropped by JSON.stringify, so the shipped JSON carries no key
+    // and the UI shows no dangling "·".
+    const [empty] = toCities([record({ name: 'Nowhere', countryCode: '' })]);
+    expect(empty?.country).toBeUndefined();
+    const [unknown] = toCities([record({ name: 'Elsewhere', countryCode: 'ZZ' })]);
+    expect(unknown?.country).toBeUndefined();
   });
 
   it('disambiguates same-name cities with a country suffix', () => {
@@ -72,8 +112,10 @@ describe('toCities', () => {
       record({ geonameId: 20, name: 'Springfield', countryCode: 'US' }),
     ]);
     const slugs = cities.map((c) => c.slug).sort();
+    // The first record claims the country suffix; the one that still collides
+    // falls back to its OWN geonameId (20), which is globally unique.
     expect(slugs).toContain('springfield-us');
-    expect(slugs).toContain('springfield-10');
+    expect(slugs).toContain('springfield-20');
   });
 
   it('leaves a unique name as a bare slug', () => {

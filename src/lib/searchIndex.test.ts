@@ -11,12 +11,13 @@ const prague: City = {
   timeZone: 'Europe/Prague',
   altNames: ['Praha'],
   population: 1165000,
+  country: 'Czechia',
 };
 
 describe('toSearchIndex', () => {
-  it('keeps only the fields search needs (slug, name, altNames)', () => {
+  it('keeps only the fields search needs (slug, name, altNames, country)', () => {
     expect(toSearchIndex([prague])).toEqual([
-      { slug: 'prague', name: 'Prague', altNames: ['Praha'] },
+      { slug: 'prague', name: 'Prague', altNames: ['Praha'], country: 'Czechia' },
     ]);
   });
 
@@ -26,5 +27,20 @@ describe('toSearchIndex', () => {
     expect(entry).not.toHaveProperty('timeZone');
     expect(entry).not.toHaveProperty('population');
     expect(entry).not.toHaveProperty('coords');
+  });
+
+  it('omits country entirely when a city has none (stays lean, no null key)', () => {
+    const noCountry: City = {
+      slug: 'nowhere',
+      name: 'Nowhere',
+      coords: '0.00°N, 0.00°E',
+      longitude: 0,
+      timeZone: 'UTC',
+      altNames: [],
+      population: 1000,
+    };
+    const [entry] = toSearchIndex([noCountry]);
+    expect(entry).toEqual({ slug: 'nowhere', name: 'Nowhere', altNames: [] });
+    expect(entry).not.toHaveProperty('country');
   });
 });

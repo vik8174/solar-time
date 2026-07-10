@@ -9,9 +9,9 @@ import CitySearch from './CitySearch';
 afterEach(cleanup);
 
 const CITIES: readonly SearchCity[] = [
-  { slug: 'prague', name: 'Prague', altNames: ['Praha'] },
-  { slug: 'munich', name: 'Munich', altNames: ['München'] },
-  { slug: 'madrid', name: 'Madrid', altNames: [] },
+  { slug: 'prague', name: 'Prague', altNames: ['Praha'], country: 'Czechia' },
+  { slug: 'munich', name: 'Munich', altNames: ['München'], country: 'Germany' },
+  { slug: 'madrid', name: 'Madrid', altNames: [], country: 'Spain' },
 ];
 
 const renderSearch = (): {
@@ -214,7 +214,7 @@ describe('CitySearch', () => {
     expect(document.activeElement).toBe(input);
   });
 
-  it('shows alt names as hints in the option label', async () => {
+  it('shows the country as the secondary hint for a canonical-name match', async () => {
     const user = userEvent.setup();
     renderSearch();
 
@@ -222,8 +222,22 @@ describe('CitySearch', () => {
     await user.type(input, 'Prague');
 
     const option = await screen.findByRole('option', { name: /Prague/ });
-    // Prague has an alt name 'Praha'
-    expect(option.textContent).toContain('Praha');
+    // A name match defaults to the country, not the cryptic alt (issue #91).
+    expect(option.textContent).toContain('Czechia');
+    expect(option.textContent).not.toContain('Praha');
+  });
+
+  it('shows the matched alt as the hint when the match came via an alt', async () => {
+    const user = userEvent.setup();
+    renderSearch();
+
+    // "munchen" matches Munich only through its alt "München" (issue #43).
+    await user.type(screen.getByRole('combobox'), 'munchen');
+
+    const option = await screen.findByRole('option', { name: 'Munich' });
+    // The alt is the reason the row matched, so it shows instead of the country.
+    expect(option.textContent).toContain('München');
+    expect(option.textContent).not.toContain('Germany');
   });
 
   it('exposes the city name — not glued with the alt — as the option accessible name', async () => {

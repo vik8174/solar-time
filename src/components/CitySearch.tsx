@@ -212,39 +212,44 @@ export default function CitySearch({
 
       {showList && (
         <ul className="city-search__listbox" id={LISTBOX_ID} role="listbox" aria-label="Cities">
-          {results.map((city, i) => (
-            <li key={city.slug} role="presentation">
-              <a
-                ref={(el) => {
-                  optionRefs.current[i] = el;
-                }}
-                id={optionId(i)}
-                role="option"
-                aria-selected={i === activeIndex}
-                // Accessible name = the city itself; the matched alt is a
-                // decorative visual hint (why the row matched), so it must not
-                // glue onto the name for a screen reader (issue #43).
-                aria-label={city.name}
-                className="city-search__option"
-                href={`/${city.slug}`}
-                data-astro-prefetch
-                onMouseEnter={() => {
-                  setActiveIndex(i);
-                }}
-                onClick={(event) => {
-                  if (onSelect) event.preventDefault();
-                  selectCity(city);
-                }}
-              >
-                <span className="city-search__option-name">{city.name}</span>
-                {city.altNames.length > 0 && (
-                  <span className="city-search__option-alt" aria-hidden="true">
-                    {city.altNames[0]}
-                  </span>
-                )}
-              </a>
-            </li>
-          ))}
+          {results.map(({ city, matchedAlt }, i) => {
+            // Default secondary hint is the country; when the match came via an
+            // alt (an exonym), show that alt instead as the reason (issue #43).
+            const hint = matchedAlt ?? city.country;
+            return (
+              <li key={city.slug} role="presentation">
+                <a
+                  ref={(el) => {
+                    optionRefs.current[i] = el;
+                  }}
+                  id={optionId(i)}
+                  role="option"
+                  aria-selected={i === activeIndex}
+                  // Accessible name = the city itself; the country/alt hint is a
+                  // decorative visual cue (why the row matched or which country),
+                  // so it must not glue onto the name for a screen reader (#43).
+                  aria-label={city.name}
+                  className="city-search__option"
+                  href={`/${city.slug}`}
+                  data-astro-prefetch
+                  onMouseEnter={() => {
+                    setActiveIndex(i);
+                  }}
+                  onClick={(event) => {
+                    if (onSelect) event.preventDefault();
+                    selectCity(city);
+                  }}
+                >
+                  <span className="city-search__option-name">{city.name}</span>
+                  {hint !== undefined && (
+                    <span className="city-search__option-alt" aria-hidden="true">
+                      {hint}
+                    </span>
+                  )}
+                </a>
+              </li>
+            );
+          })}
         </ul>
       )}
 

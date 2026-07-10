@@ -185,3 +185,42 @@ got a healthy preview channel again (state `CLEAN`, no 429).
 **Gotcha for future edits:** the reclaim job needs `actions/checkout` — `firebase
 hosting:channel:list/delete` error `"Not in a Firebase app directory"` without `firebase.json`,
 and `--json` hides that error in stdout, so keep the failure-surfacing `cat channels.json`.
+
+## R-016 — Regenerating `cities.json` picks up upstream GeoNames drift · accepted
+
+`npm run build:cities` refetches the live `cities15000` dump, so **any** regeneration also imports
+whatever changed upstream since the last one — the diff is never "just the field I added".
+Regenerating for #91 (first refresh in a while) moved the dataset **1085 → 1084 cities**: `comilla`
+dropped out of the population pass (no `cumilla` replacement), `rawson` entered via the
+zone-completeness pass, and `san-juan-ar` + `san-juan-pr` **collapsed into a bare `san-juan`** —
+once only one San Juan survived, the collision that forced the country suffix was gone.
+
+**Why accepted:** the generator is deterministic _given a dump_ (verified byte-identical on
+re-run); the input is what moved. Adding `country` required a regeneration, so the drift was
+unavoidable, and nothing references the changed slugs (grepped `src/`, `docs/`, tests — clean).
+The site is stage-only + `noindex`, so the slug churn breaks no indexed URL today.
+
+**What to watch:** those slugs are **public URLs**. Once the site is indexed, a regeneration can
+silently 404 a previously-live `/[city]` page. **Mitigation to consider before going public:**
+pin the dump (commit a checksum / vendor the snapshot) so dataset refreshes become an explicit,
+reviewed act, and/or emit redirects for slugs that disappear. #90 (scale the count) will hit this
+same drift — it regenerates the same file.
+
+## R-017 — `scripts/*.test.ts` never ran (dormant tests) · resolved
+
+`vitest.config.ts` scoped `test.include` to `src/**/*.{test,spec}.{ts,tsx}`, so the sibling tests
+for the build-time generator — `scripts/citySlug.test.ts` and `scripts/geonames.test.ts` — **matched
+nothing and never executed**, in CI or in the `pre-push` gate. They looked like coverage but were
+dead weight: `npx vitest run scripts/citySlug.test.ts` reported "No test files found".
+
+This bit #91 directly. The acceptance-critical `resolveCountryName` edge cases live script-side; a
+test asserting `resolveCountryName('ZZ') === undefined` sat there **passing by never running**,
+while the implementation actually returned `"Unknown Region"` (D-024).
+
+**Resolved (2026-07-10, #91):** `test.include` now also matches `scripts/**/*.{test,spec}.{ts,tsx}`.
+`coverage.include` is deliberately **unchanged** (still `src/lib` + `src/domain`) — the generator is
+build glue, not shipped logic, so it runs but isn't held to the app's thresholds. Turning them on
+immediately surfaced a **pre-existing wrong assertion** in `citySlug.test.ts` (it expected
+`springfield-10`, but the record that collides correctly falls back to its _own_ id →
+`springfield-20`); the assertion was fixed, the behavior was not touched.
+**Lesson:** a test file that has never been observed to fail has never been observed at all.
