@@ -6,6 +6,24 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Chore #102 — Bump `actions/checkout` + `actions/setup-node` v4 → v5 (Node 20 EOL)
+
+- **Date:** 2026-07-10
+- **PR:** _pending_ · **Issue:** #102 (closed)
+- **What:** Every CI run logged _"Node.js 20 is deprecated. The following actions target Node.js 20
+  but are being forced to run on Node.js 24: `actions/checkout@v4`"_. Cosmetic while the runner's
+  Node 20 shim exists, but the v4 lines break when it's removed. Bumped the pinned majors to the v5
+  lines (which target Node 24): **3× `actions/checkout`, 2× `actions/setup-node`** — `ci.yml` jobs
+  `ci` + `preview`, and `preview-cleanup.yml` job `reclaim`. Spun off from #96 / R-015.
+- **Scope — `uses:` lines only:** the `with:` blocks (`node-version: 22`, `cache: npm`) are
+  untouched, and so is the `ci` job's `name: Checks` — that string **is** the required status-check
+  context under `main`'s branch protection (R-003), so renaming it would silently break the merge
+  gate for every future PR. The `reclaim` job keeps its `checkout` too — the Firebase channel ops
+  need `firebase.json` on disk (the #96 failure mode).
+- **No tests:** the diff is 5 `uses:` lines of YAML — no logic, nothing unit-testable. The CI run
+  itself is the verification.
+- **Verify:** _pending_
+
 ## Feature #91 — Search results show "City · Country" instead of a cryptic alt-name
 
 - **Date:** 2026-07-10
