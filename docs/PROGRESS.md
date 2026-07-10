@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Feature #86 — JSON-LD structured data (WebSite, WebApplication, BreadcrumbList)
 
 - **Date:** 2026-07-10
-- **PR:** _pending_ · **Issue:** #86 (closed)
+- **PR:** #115 (merged) · **Issue:** #86 (closed)
 - **What:** The site emitted no structured data. It now ships JSON-LD in the `<head>`:
   **`WebSite` + `WebApplication`** on the home page `/`, and **`BreadcrumbList`**
   (`Home → {City}`) on every `/[city]` page.
