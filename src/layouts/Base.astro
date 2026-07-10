@@ -16,6 +16,7 @@ import { ClientRouter } from 'astro:transitions';
 import CitySearch from '../components/CitySearch.tsx';
 import { FEEDBACK_URL, GEONAMES_URL, SUPPORT_URL } from '../config/links';
 import { ANALYTICS_ENV } from '../config/site';
+import { serializeJsonLd, type JsonLdNode } from '../lib/jsonLd';
 import '../styles/tokens.css';
 
 interface Props {
@@ -30,6 +31,13 @@ interface Props {
   /** Emit `<meta name="robots" content="noindex">` (e.g. the live home page). */
   noindex?: boolean;
   /**
+   * Builds the page's JSON-LD from the absolute site origin (#86). A builder,
+   * not a value, because the nodes embed absolute URLs: it is called only when
+   * `Astro.site` is set, so the `<script>` drops cleanly when it is not —
+   * never a relative or `undefined` URL. See `src/lib/jsonLd.ts`.
+   */
+  jsonLd?: (origin: string) => JsonLdNode | readonly JsonLdNode[];
+  /**
    * Render the quiet, dismissable Buy-Me-a-Coffee note after the result. Set on
    * the result pages (`/`, `/[city]`); omitted on `/privacy` (D-008).
    */
@@ -43,13 +51,16 @@ const {
   ogImagePath,
   noindex = false,
   support = false,
+  jsonLd,
 } = Astro.props;
 
 // Absolutize the site-relative paths against `site` (set per build target in
-// astro.config, D-020). Guarded so the tags drop cleanly if `site` is unset.
+// astro.config, D-020). Guarded so the tags drop cleanly if `site` is unset —
+// the JSON-LD builder runs under the same guard, for the same reason.
 const site = Astro.site;
 const canonical = canonicalPath && site ? new URL(canonicalPath, site).href : undefined;
 const ogImage = ogImagePath && site ? new URL(ogImagePath, site).href : undefined;
+const structuredData = jsonLd && site ? jsonLd(site.href) : undefined;
 ---
 
 <html lang="en">
@@ -83,6 +94,15 @@ const ogImage = ogImagePath && site ? new URL(ogImagePath, site).href : undefine
     <meta name="twitter:title" content={title} />
     {description && <meta name="twitter:description" content={description} />}
     {ogImage && <meta name="twitter:image" content={ogImage} />}
+
+    {
+      /* `set:html` because Astro HTML-escapes text children, which would turn
+         `&` into `&amp;` and corrupt the JSON. `is:inline` keeps Astro from
+         treating it as a bundleable script. Serializer escapes `<`. */
+      structuredData && (
+        <script type="application/ld+json" is:inline set:html={serializeJsonLd(structuredData)} />
+      )
+    }
     <ClientRouter />
   </head>
   <body data-analytics-env={ANALYTICS_ENV}>

@@ -20,6 +20,18 @@ import { CITIES } from '../data/cities';
 import { computeDeviation } from '../domain/solarTime';
 import Base from '../layouts/Base.astro';
 import { buildCityViewModel } from '../lib/cityViewModel';
+import { homeJsonLd, type JsonLdNode } from '../lib/jsonLd';
+
+// Title + description are consts so the JSON-LD below describes exactly what
+// the `<head>` renders — schema that drifts from the page is spam (#86).
+const TITLE = 'Solar Drift — how far your clock is from the sun';
+const DESCRIPTION =
+  'See how far your clock runs from true solar time, live for your location — the exact minutes, real solar noon, and the longitude, equation-of-time, and daylight-saving breakdown.';
+
+// WebSite + WebApplication. `/` is noindex today (D-005), so crawlers will only
+// read this once #82 makes the landing indexable — the markup is correct now.
+const jsonLd = (origin: string): readonly JsonLdNode[] =>
+  homeJsonLd({ origin, name: 'Solar Drift', description: DESCRIPTION });
 
 // Neutral global default for first paint: the most populous city. Deterministic
 // (population desc, slug tie-break) and immediately replaced client-side by the
@@ -38,12 +50,13 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
 ---
 
 <Base
-  title="Solar Drift — how far your clock is from the sun"
-  description="See how far your clock runs from true solar time, live for your location — the exact minutes, real solar noon, and the longitude, equation-of-time, and daylight-saving breakdown."
+  title={TITLE}
+  description={DESCRIPTION}
   canonicalPath="/"
   ogImagePath="/og/home.png"
   noindex
   support
+  jsonLd={jsonLd}
 >
   <main class="page" data-home-longitude={neutral.longitude} data-home-timezone={neutral.timeZone}>
     <div class="content">
