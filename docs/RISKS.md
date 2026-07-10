@@ -224,3 +224,25 @@ immediately surfaced a **pre-existing wrong assertion** in `citySlug.test.ts` (i
 `springfield-10`, but the record that collides correctly falls back to its _own_ id →
 `springfield-20`); the assertion was fixed, the behavior was not touched.
 **Lesson:** a test file that has never been observed to fail has never been observed at all.
+
+## R-018 — Concurrent dev servers share one Vite dep-optimizer cache · open
+
+Vite's default `cacheDir` is `<root>/node_modules/.vite`. Because `ticket-worktree.sh` symlinks
+`node_modules` (D-015), that path **resolves to the same physical directory** for the primary clone
+and for _every_ worktree — verified: `realpath <worktree>/node_modules/.vite` ==
+`<primary>/node_modules/.vite`. So two `astro dev` servers running at once (say a worker in a
+worktree and the coordinator in the primary clone) re-optimize deps into the same cache and
+invalidate each other. Observed while fixing #114: after the worktree's server had run, the primary
+clone's server answered `504 (Outdated Optimize Dep)` and a plain reload did **not** clear it — the
+server had to be restarted.
+
+**Pre-existing, not introduced by #114** — the symlink dates to #37/#38. It was simply unreachable
+before, because `astro dev` in a worktree never got far enough to matter (the island 403'd). Fixing
+#114 makes worktree dev servers useful, so this becomes hittable.
+
+**Impact:** low and self-healing — restart the affected dev server. No effect on `pre-push`,
+`astro build`, or CI (none of them use the dev optimizer cache).
+**Watch:** acute only when two dev servers run **concurrently**. If it starts to bite, the one-line
+fix is a per-worktree `vite.cacheDir` (outside the symlinked `node_modules`) in `astro.config.mjs`,
+deliberately left out of #114 to keep that change small.
+**Related:** R-013 (same symlink, different failure mode — parallel dependency changes).
