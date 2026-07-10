@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Fix #114 — Worktree `node_modules` symlink broke `astro dev` (island never hydrated)
 
 - **Date:** 2026-07-10
-- **PR:** _pending_ · **Issue:** #114 (closed)
+- **PR:** #117 (merged) · **Issue:** #114 (closed)
 - **Symptom:** in a worktree from `scripts/ticket-worktree.sh` (R-008), `npm run dev` served `/`,
   but the `CitySearch` island stayed inert markup. Console:
   `[astro-island] Error hydrating /src/components/CitySearch.tsx` + a **403** on
