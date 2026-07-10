@@ -6,6 +6,48 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Feature #86 — JSON-LD structured data (WebSite, WebApplication, BreadcrumbList)
+
+- **Date:** 2026-07-10
+- **PR:** _pending_ · **Issue:** #86 (closed)
+- **What:** The site emitted no structured data. It now ships JSON-LD in the `<head>`:
+  **`WebSite` + `WebApplication`** on the home page `/`, and **`BreadcrumbList`**
+  (`Home → {City}`) on every `/[city]` page.
+- **Where the value lands today:** `/` is still `noindex` (D-005), so crawlers won't read the
+  home nodes until **#82** makes the landing indexable — the markup is correct and waiting.
+  The **immediately-useful half is the breadcrumb**, because the city pages _are_ indexable
+  on prod (D-020). 1084 city pages gained it.
+- **`FAQPage` deliberately not shipped.** Issue #86's title mentions it, but its body defers
+  the FAQ to **#82** (the landing ticket owns the content). Inventing FAQ copy here would be
+  schema that contradicts the visible page. Follow-up after #82.
+- **Architecture (mirrors `seoMeta.ts`):** new **pure** `src/lib/jsonLd.ts` — `homeJsonLd`,
+  `cityBreadcrumbJsonLd`, `serializeJsonLd`. It takes the **origin as a parameter**; it never
+  imports `Astro.site` or `src/config/site.ts`, so it is unit-testable under the D-012 gate
+  (17 tests, 100% stmts/branches/funcs/lines on the module). See **D-025** for the emission
+  contract.
+- **Three real traps, each covered:**
+  1. Astro **HTML-escapes** text interpolation — a bare `{JSON.stringify(x)}` would turn `&`
+     into `&amp;` and corrupt the payload. The tag uses **`set:html`** (+ `is:inline`).
+  2. `serializeJsonLd` rewrites every **`<`** to its JSON unicode escape, so a literal
+     `</script>` inside a string can't terminate the tag. Round-trip tested.
+  3. All `url` / `@id` / breadcrumb `item` values are **absolute**, built with
+     `new URL(path, origin)` (so odd slugs percent-encode correctly).
+- **Unset-`site` guard, actually verified:** `Base.astro` takes a **builder** prop
+  (`jsonLd?: (origin: string) => …`) rather than a value, and calls it only when `Astro.site`
+  is set — the same `&&` guard that protects canonical/OG. Probed by rebuilding with `site:`
+  commented out of `astro.config.mjs`: the `<script>` **disappears entirely** (0 blocks on
+  home and on `/prague`), exactly like `rel="canonical"`. No relative or `undefined` URL.
+- **Verified in `dist/`:** the tag is present on `/index.html` and on city pages, is valid
+  JSON (`JSON.parse`), carries `@context: https://schema.org`, and every URL is absolute.
+  `/privacy` has none (correct). Payload is **931 B** on home, **~270 B** per city page.
+  Nothing entered the client bundle (no `schema.org` / `BreadcrumbList` in `dist/_astro/`).
+- **Not validated (honest limit):** Google's Rich Results Test / `validator.schema.org` were
+  **not** run — both need a public URL or an interactive browser, neither available in this
+  headless session. Worth a manual paste from the PR preview before merge.
+- **`[city].astro` touched in frontmatter only** (a const + one `<Base>` attribute), so **#87**
+  — which rewrites that page's body — rebases clean.
+- **Review:** code-reviewer → PASS.
+
 ## Chore #102 — Bump `actions/checkout` + `actions/setup-node` v4 → v5 (Node 20 EOL)
 
 - **Date:** 2026-07-10

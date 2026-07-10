@@ -16,6 +16,7 @@ import { CITIES } from '../data/cities';
 import { computeDeviation } from '../domain/solarTime';
 import Base from '../layouts/Base.astro';
 import { buildCityViewModel } from '../lib/cityViewModel';
+import { cityBreadcrumbJsonLd, type JsonLdNode } from '../lib/jsonLd';
 import { seoMeta } from '../lib/seoMeta';
 
 export const getStaticPaths = (() =>
@@ -35,6 +36,10 @@ const vm = buildCityViewModel({ name: city.name, coords: city.coords }, deviatio
 // SEO/share metadata from the same build-time deviation (D-003). City pages are
 // indexable on prod, noindex on stage (D-020).
 const meta = seoMeta({ name: city.name, slug: city.slug }, deviation);
+// Breadcrumb structured data: Home → {City}. These pages are the indexable ones
+// on prod (D-020), so this is where the JSON-LD earns its keep (#86).
+const jsonLd = (origin: string): JsonLdNode =>
+  cityBreadcrumbJsonLd({ origin, cityName: city.name, slug: city.slug });
 ---
 
 <Base
@@ -44,6 +49,7 @@ const meta = seoMeta({ name: city.name, slug: city.slug }, deviation);
   ogImagePath={meta.ogImagePath}
   noindex={!IS_PROD}
   support
+  jsonLd={jsonLd}
 >
   <main
     class="page"

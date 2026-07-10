@@ -334,3 +334,47 @@ disambiguation is exactly what D-016's consumer needs, and it becomes load-beari
 the dataset (multiple "Springfield", "San José"). **Invariant kept from #43:** the option's
 accessible name is the city alone (`aria-label`); country/alt are decorative `aria-hidden` hints.
 Adopted with feature #91.
+
+## D-025 — JSON-LD from a pure builder, absolutized behind the `Astro.site` guard · accepted
+
+The site needed structured data (#86) but had no place to put it. **Decision:** mirror the
+`seoMeta.ts` contract (D-012) exactly — a **pure `src/lib/jsonLd.ts`** builds the nodes and
+**`Base.astro` emits** them.
+
+**Origin is a parameter, not an import.** `jsonLd.ts` never touches `Astro.site` or
+`src/config/site.ts`; `homeJsonLd({ origin, … })` / `cityBreadcrumbJsonLd({ origin, … })` take the
+absolute origin and resolve every `url` / `@id` / breadcrumb `item` through `new URL(path, origin)`.
+That keeps the module unit-testable under the coverage gate and keeps URL-encoding correct for
+non-ASCII slugs.
+
+**The prop is a builder, not a value.** `Base.astro` takes
+`jsonLd?: (origin: string) => JsonLdNode | readonly JsonLdNode[]` and calls it only when
+`Astro.site` is set — the identical `&&` guard that already protects `canonical` and the OG image
+(`Base.astro`). Passing pre-built nodes would have forced each page to duplicate that guard and to
+decide what a node with a relative URL means. With a builder there is no such state: **no `site` ⇒
+no call ⇒ the `<script>` disappears**, never a relative or `undefined` URL. Verified by rebuilding
+with `site:` commented out (0 `ld+json` blocks, exactly like `rel="canonical"`). It also sidesteps
+`exactOptionalPropertyTypes`: a function literal is always passed, never `undefined`.
+
+**Two escaping hazards, both load-bearing — do not "simplify" either away.**
+
+1. **`set:html` is mandatory.** Astro HTML-escapes text interpolation, so a plain
+   `{JSON.stringify(node)}` child emits `&amp;` for `&` and produces broken JSON-LD. The tag also
+   carries `is:inline` so Astro treats it as opaque markup rather than a bundleable script.
+2. **`serializeJsonLd` rewrites `<` to its JSON unicode escape.** A literal `</script>` inside any
+   string would otherwise close the tag early. `>` is deliberately left alone — it is inert once
+   `<` cannot appear. `JSON.parse` decodes the escape back, so the payload is unchanged.
+
+**Content is constrained by the visible page.** `WebSite` + `WebApplication` on `/` (linked by
+`@id`), `BreadcrumbList` (`Home → {City}`, two levels, no invented category tier) on `/[city]`.
+**No `aggregateRating`, `review`, `offers`, or `author`** — there is nothing truthful to put in
+them. **No `potentialAction`/`SearchAction`**: the city search is a client island with no `?q=`
+URL for a sitelinks searchbox to target, so claiming one would be schema that lies. The home
+`title`/`description` are hoisted to consts in `index.astro` so the `<head>` and the JSON-LD cannot
+drift apart.
+
+**Scope:** `FAQPage` is **not** shipped. #86's body defers the FAQ to **#82**, which owns the
+landing copy; inventing questions would violate the "schema matches the page" rule above. It
+becomes a follow-up once #82 lands. **Note:** `/` is `noindex` today (D-005), so the home nodes are
+inert until #82 — the breadcrumb on the indexable city pages (D-020) is what pays off now.
+Adopted with feature #86.
