@@ -21,6 +21,14 @@
 import type { Deviation } from '../domain/solarTime';
 import { formatClock, isInSync } from './format';
 
+/**
+ * The brand OG card served at `/og/home.png` — the share preview for every city
+ * outside the per-city OG top-K (ADR D-019, amended by #90). One shared file,
+ * not a per-city render; see {@link topOgCitySlugs} in `ogPolicy.ts` for the SSOT
+ * that decides membership.
+ */
+const BRAND_OG_PATH = '/og/home.png';
+
 /** Static identity of the city being described. */
 export interface SeoCity {
   name: string;
@@ -45,9 +53,13 @@ export interface SeoMeta {
  *
  * @param city - City identity (display name + slug).
  * @param d - Clock-vs-sun deviation baked at build time.
+ * @param hasOwnOgCard - Whether this city is in the per-city OG top-K (D-019 /
+ *   #90). `true` → its bespoke `/og/<slug>.png`; `false` → the shared brand card
+ *   (`/og/home.png`). The caller derives this from `topOgCitySlugs` (the SSOT),
+ *   so this module never sees the whole registry and stays trivially testable.
  * @returns Title, description, and site-relative canonical / OG image paths.
  */
-export const seoMeta = (city: SeoCity, d: Deviation): SeoMeta => {
+export const seoMeta = (city: SeoCity, d: Deviation, hasOwnOgCard: boolean): SeoMeta => {
   const noon = formatClock(d.solarNoon);
   const description = isInSync(d.total)
     ? `In ${city.name}, your clock is in sync with the sun — real solar noon is at ${noon}. ` +
@@ -58,7 +70,7 @@ export const seoMeta = (city: SeoCity, d: Deviation): SeoMeta => {
     title: `Solar time in ${city.name}`,
     description,
     canonicalPath: `/${city.slug}`,
-    ogImagePath: `/og/${city.slug}.png`,
+    ogImagePath: hasOwnOgCard ? `/og/${city.slug}.png` : BRAND_OG_PATH,
   };
 };
 

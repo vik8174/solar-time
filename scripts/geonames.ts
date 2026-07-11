@@ -1,6 +1,6 @@
 /**
  * geonames — pure parsing + deterministic selection of the GeoNames
- * `cities15000` dump into the city dataset. Zero I/O: takes the raw TSV text,
+ * `cities5000` dump into the city dataset. Zero I/O: takes the raw TSV text,
  * returns plain records. The build script (`buildCities.ts`) owns file reads
  * and JSON writes; everything reproducible and testable lives here.
  *
@@ -115,7 +115,7 @@ const parseAltNames = (raw: string, primary: string): readonly string[] => {
 /**
  * Parses the whole dump text into records, skipping malformed/ineligible rows.
  *
- * @param text - Full `cities15000.txt` content.
+ * @param text - Full `cities5000.txt` content.
  * @returns Every eligible record, in dump order.
  */
 export const parseDump = (text: string): GeoNameRecord[] => {

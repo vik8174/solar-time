@@ -34,17 +34,23 @@ const prague = { name: 'Prague', slug: 'prague' };
 
 describe('seoMeta', () => {
   it('titles the page with the city name for keyword-matched search', () => {
-    expect(seoMeta(prague, ahead).title).toBe('Solar time in Prague');
+    expect(seoMeta(prague, ahead, true).title).toBe('Solar time in Prague');
   });
 
-  it('derives canonical and OG image paths from the slug', () => {
-    const meta = seoMeta(prague, ahead);
-    expect(meta.canonicalPath).toBe('/prague');
-    expect(meta.ogImagePath).toBe('/og/prague.png');
+  it('derives the canonical path from the slug', () => {
+    expect(seoMeta(prague, ahead, true).canonicalPath).toBe('/prague');
+  });
+
+  it('points a top-K city at its own per-city OG card', () => {
+    expect(seoMeta(prague, ahead, true).ogImagePath).toBe('/og/prague.png');
+  });
+
+  it('falls a tail city back to the shared brand OG card (D-019 / #90)', () => {
+    expect(seoMeta(prague, ahead, false).ogImagePath).toBe('/og/home.png');
   });
 
   it('describes an ahead deviation with the number, direction, and solar noon', () => {
-    const { description } = seoMeta(prague, ahead);
+    const { description } = seoMeta(prague, ahead, true);
     expect(description).toContain('Prague');
     expect(description).toContain('48 minutes');
     expect(description).toContain('ahead of the sun');
@@ -52,7 +58,7 @@ describe('seoMeta', () => {
   });
 
   it('describes a behind deviation with the opposite direction', () => {
-    const { description } = seoMeta(prague, behind);
+    const { description } = seoMeta(prague, behind, true);
     expect(description).toContain('11 minutes');
     expect(description).toContain('behind the sun');
     expect(description).toContain('11:49');
@@ -60,11 +66,11 @@ describe('seoMeta', () => {
 
   it('uses the singular "minute" for a one-minute deviation', () => {
     const oneMin: Deviation = { ...ahead, total: 1, solarNoon: 12 * 60 + 1 };
-    expect(seoMeta(prague, oneMin).description).toContain('1 minute ');
+    expect(seoMeta(prague, oneMin, true).description).toContain('1 minute ');
   });
 
   it('describes the in-sync edge case without a signed number', () => {
-    const { description } = seoMeta(prague, synced);
+    const { description } = seoMeta(prague, synced, true);
     expect(description).toContain('in sync with the sun');
     expect(description).toContain('12:00');
     expect(description).not.toMatch(/[+-]\d/);
@@ -76,7 +82,7 @@ describe('seoMeta', () => {
       total: 0.6,
       solarNoon: 12 * 60,
     };
-    const { description } = seoMeta(prague, rounded);
+    const { description } = seoMeta(prague, rounded, true);
     expect(description).toContain('in sync with the sun');
   });
 
@@ -86,7 +92,7 @@ describe('seoMeta', () => {
       total: 0.4,
       solarNoon: 12 * 60,
     };
-    const { description } = seoMeta(prague, rounded);
+    const { description } = seoMeta(prague, rounded, true);
     expect(description).toContain('in sync with the sun');
   });
 
@@ -96,7 +102,7 @@ describe('seoMeta', () => {
       total: -0.6,
       solarNoon: 11 * 60 + 59,
     };
-    const { description } = seoMeta(prague, rounded);
+    const { description } = seoMeta(prague, rounded, true);
     expect(description).toContain('in sync with the sun');
   });
 
@@ -106,7 +112,7 @@ describe('seoMeta', () => {
       total: -0.4,
       solarNoon: 12 * 60,
     };
-    const { description } = seoMeta(prague, rounded);
+    const { description } = seoMeta(prague, rounded, true);
     expect(description).toContain('in sync with the sun');
   });
 
@@ -116,7 +122,7 @@ describe('seoMeta', () => {
       total: 0.99,
       solarNoon: 12 * 60,
     };
-    const { description } = seoMeta(prague, nearSync);
+    const { description } = seoMeta(prague, nearSync, true);
     expect(description).toContain('in sync with the sun');
   });
 
@@ -126,7 +132,7 @@ describe('seoMeta', () => {
       total: 1.01,
       solarNoon: 12 * 60 + 1,
     };
-    const { description } = seoMeta(prague, justAboveSync);
+    const { description } = seoMeta(prague, justAboveSync, true);
     expect(description).toContain('1 minute ahead of the sun');
   });
 
@@ -136,7 +142,7 @@ describe('seoMeta', () => {
       total: -0.99,
       solarNoon: 12 * 60,
     };
-    const { description } = seoMeta(prague, nearSyncNeg);
+    const { description } = seoMeta(prague, nearSyncNeg, true);
     expect(description).toContain('in sync with the sun');
   });
 
@@ -146,7 +152,7 @@ describe('seoMeta', () => {
       total: -1.01,
       solarNoon: 11 * 60 + 59,
     };
-    const { description } = seoMeta(prague, justBelowSync);
+    const { description } = seoMeta(prague, justBelowSync, true);
     expect(description).toContain('1 minute behind the sun');
   });
 
@@ -156,7 +162,7 @@ describe('seoMeta', () => {
       total: 48,
       solarNoon: 23 * 60 + 59, // 23:59
     };
-    const { description } = seoMeta(prague, lastMinute);
+    const { description } = seoMeta(prague, lastMinute, true);
     expect(description).toContain('23:59');
   });
 
@@ -166,20 +172,20 @@ describe('seoMeta', () => {
       total: 48,
       solarNoon: 24 * 60, // Will wrap to 00:00
     };
-    const { description } = seoMeta(prague, wrapped);
+    const { description } = seoMeta(prague, wrapped, true);
     expect(description).toContain('00:00');
   });
 
   it('uses plural "minutes" for a large deviation', () => {
     const large: Deviation = { ...ahead, total: 120, solarNoon: 14 * 60 };
-    expect(seoMeta(prague, large).description).toContain('120 minutes');
+    expect(seoMeta(prague, large, true).description).toContain('120 minutes');
   });
 
   it('preserves city name across all deviation types', () => {
     const cities = ['Prague', 'Tokyo', 'New York', 'Sydney'];
     cities.forEach((cityName) => {
       const city = { name: cityName, slug: cityName.toLowerCase() };
-      expect(seoMeta(city, ahead).description).toContain(cityName);
+      expect(seoMeta(city, ahead, true).description).toContain(cityName);
     });
   });
 });

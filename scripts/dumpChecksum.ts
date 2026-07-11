@@ -4,9 +4,9 @@
  * (`buildCities.ts`) reads the extracted dump + the pinned hash and does any
  * rewrite; everything reproducible and unit-testable lives here.
  *
- * The pin is a sha256 of the **extracted `cities15000.txt`** (not the `.zip` —
+ * The pin is a sha256 of the **extracted `cities5000.txt`** (not the `.zip` —
  * zip metadata such as timestamps isn't byte-stable). It is committed to
- * `scripts/cities15000.sha256` and reviewed like any other source.
+ * `scripts/cities5000.sha256` and reviewed like any other source.
  *
  * `GEONAMES_ACCEPT_DRIFT` is the sanctioned bump path: when set, the compare is
  * skipped and the pin is rewritten to the current hash. That's how a *future*
@@ -58,7 +58,7 @@ export const reconcileChecksum = (
   if (acceptDrift) return 'write';
   if (pinned === undefined) {
     throw new Error(
-      'No pinned GeoNames checksum (scripts/cities15000.sha256). ' +
+      'No pinned GeoNames checksum (scripts/cities5000.sha256). ' +
         'Re-run with GEONAMES_ACCEPT_DRIFT=1 to create it.',
     );
   }

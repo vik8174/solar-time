@@ -1,8 +1,12 @@
 /**
  * buildCities — regenerates `src/data/cities.json` from the GeoNames
- * `cities15000` dump. This is the I/O boundary: it fetches + unzips the dump
+ * `cities5000` dump. This is the I/O boundary: it fetches + unzips the dump
  * (cached under `scripts/.cache/`, git-ignored), then delegates every
  * reproducible decision to the pure `geonames` / `citySlug` modules.
+ *
+ * The `cities5000` dump (population ≥ 5,000; ~50k rows) replaced `cities15000`
+ * with #90 to scale the searchable/indexable set to ~5,000 cities. That was a
+ * sanctioned dump bump (`GEONAMES_ACCEPT_DRIFT=1`, see below).
  *
  * `cities.json` is committed and consumed by the Astro build — so a normal
  * `astro build` needs no network. Run this only to refresh the dataset:
@@ -12,9 +16,9 @@
  * regeneration would silently import whatever moved upstream. Two guards make a
  * dataset change an explicit, reviewed act:
  *  - **Checksum pin** — the extracted dump is hashed and compared to the
- *    committed `scripts/cities15000.sha256`. A mismatch **fails loudly**;
+ *    committed `scripts/cities5000.sha256`. A mismatch **fails loudly**;
  *    `GEONAMES_ACCEPT_DRIFT=1` is the sanctioned bump path (skip the compare and
- *    rewrite the pin — how a future intentional refresh like #90 updates it).
+ *    rewrite the pin — how an intentional refresh like #90 updates it).
  *  - **Slug registry** — `scripts/slug-registry.json` freezes every city's slug
  *    by `geonameId`, so drift can only *add* URLs, never rename one (see
  *    `citySlug.ts`). New assignments are written back into it here.
@@ -22,7 +26,7 @@
  * CI is unaffected: CI runs `npm run build` (reads the committed `cities.json`),
  * never `build:cities` — the pin only fires on a manual regeneration.
  *
- * Data: GeoNames cities15000 (https://download.geonames.org/export/dump/),
+ * Data: GeoNames cities5000 (https://download.geonames.org/export/dump/),
  * licensed CC-BY 4.0 → the site must show footer attribution (footer slice #11).
  */
 
@@ -33,16 +37,16 @@ import { fileURLToPath } from 'node:url';
 
 import { parseSlugRegistry, type SlugRegistry } from './citySlug.ts';
 
-const DUMP_URL = 'https://download.geonames.org/export/dump/cities15000.zip';
-/** Population pass size; the zone-completeness pass adds the rest (~1000 total). */
-const TARGET_SIZE = 900;
+const DUMP_URL = 'https://download.geonames.org/export/dump/cities5000.zip';
+/** Population pass size; the zone-completeness pass adds the rest (~5000 total). */
+const TARGET_SIZE = 5000;
 
 const here = dirname(fileURLToPath(import.meta.url));
 const cacheDir = join(here, '.cache');
-const zipPath = join(cacheDir, 'cities15000.zip');
-const txtPath = join(cacheDir, 'cities15000.txt');
+const zipPath = join(cacheDir, 'cities5000.zip');
+const txtPath = join(cacheDir, 'cities5000.txt');
 const outPath = join(here, '..', 'src', 'data', 'cities.json');
-const shaPath = join(here, 'cities15000.sha256');
+const shaPath = join(here, 'cities5000.sha256');
 const registryPath = join(here, 'slug-registry.json');
 
 /**
@@ -75,7 +79,7 @@ const ensureDump = async (): Promise<void> => {
       writeFileSync(zipPath, Buffer.from(await res.arrayBuffer()));
     }
     // Node has no zip reader; `unzip` ships on macOS/Linux. Fail fast if absent.
-    execFileSync('unzip', ['-o', zipPath, 'cities15000.txt', '-d', cacheDir], {
+    execFileSync('unzip', ['-o', zipPath, 'cities5000.txt', '-d', cacheDir], {
       stdio: 'ignore',
     });
   }

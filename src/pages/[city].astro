@@ -19,26 +19,31 @@ import Base from '../layouts/Base.astro';
 import { buildCityViewModel } from '../lib/cityViewModel';
 import { cityProse } from '../lib/cityProse';
 import { cityBreadcrumbJsonLd, type JsonLdNode } from '../lib/jsonLd';
+import { topOgCitySlugs } from '../lib/ogPolicy';
 import { RELATED_CAP, relatedCities, toRelatedCity } from '../lib/relatedCities';
 import { seoMeta } from '../lib/seoMeta';
 
 export const getStaticPaths = (() => {
   // Lean registry projected once, then reused for every page's related-city
-  // pick (parsing latitude 1084× rather than 1084² times). Must live inside
+  // pick (parsing latitude ~5100× rather than ~5100² times). Must live inside
   // getStaticPaths — Astro evaluates it in isolation, so a module-scope const
   // would be out of scope here. Slugs are read from the registry, never
   // hardcoded, so a #116 slug reshuffle is picked up on the next rebuild.
   const relatedRegistry = CITIES.map(toRelatedCity);
+  // Compute the per-city OG top-K once (SSOT, D-019/#90); each page carries its
+  // own membership so `seoMeta` picks the bespoke card vs the brand fallback.
+  const ogSlugs = topOgCitySlugs(CITIES);
   return CITIES.map((city) => ({
     params: { city: city.slug },
     props: {
       city,
       related: relatedCities(toRelatedCity(city), relatedRegistry, RELATED_CAP),
+      hasOwnOgCard: ogSlugs.has(city.slug),
     },
   }));
 }) satisfies GetStaticPaths;
 
-const { city, related } = Astro.props;
+const { city, related, hasOwnOgCard } = Astro.props;
 
 const deviation = computeDeviation({
   longitude: city.longitude,
@@ -50,7 +55,7 @@ const vm = buildCityViewModel({ name: city.name, coords: city.coords }, deviatio
 const prose = cityProse({ name: city.name, longitude: city.longitude }, deviation);
 // SEO/share metadata from the same build-time deviation (D-003). City pages are
 // indexable on prod, noindex on stage (D-020).
-const meta = seoMeta({ name: city.name, slug: city.slug }, deviation);
+const meta = seoMeta({ name: city.name, slug: city.slug }, deviation, hasOwnOgCard);
 // Breadcrumb structured data: Home → {City}. These pages are the indexable ones
 // on prod (D-020), so this is where the JSON-LD earns its keep (#86).
 const jsonLd = (origin: string): JsonLdNode =>

@@ -6,6 +6,62 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Feat #90 — Scale to ~5,000 cities + decouple OG from page count
+
+- **Date:** 2026-07-11
+- **PR:** [#120](https://github.com/vik8174/solar-drift/pull/120) · **Issue:** #90 (`hitl`)
+- **What:** Only ~1,085 cities were searchable/indexable — the cap, not the pool, was the limit.
+  Two owner decisions: (1) grow to ~5,000 cities by swapping the GeoNames dump **`cities15000` →
+  `cities5000`** and raising `TARGET_SIZE` **900 → 5000**; (2) **decouple OG from page count** so the
+  build stays ~flat instead of going linear-in-city-count (R-010). Final dataset: **5,117 cities**.
+- **Sanctioned dump bump (D-026):** this **is** the intentional refresh #116 built for. Ran
+  `GEONAMES_ACCEPT_DRIFT=1 npm run build:cities` — skips the checksum compare and **rewrites** the
+  pin. Renamed `scripts/cities15000.sha256` → **`scripts/cities5000.sha256`**, new pin
+  **`54d944478777b7ad966b458ef286bf9e390522c7e915a05f87950c4f8d45ecc6`**. Every path/const/comment
+  naming the old dump updated (`buildCities.ts`, `geonames.ts`, `dumpChecksum.ts`, `cities.ts`,
+  `dev-flow.md`).
+- **Existing URLs safe by construction (#116 / D-026):** the `geonameId → slug` registry froze all
+  1,084 prior slugs **verbatim** — verified **0 changed / 0 missing** across the old registry; only
+  **4,040 new ids** got fresh slugs (registry **extended 1,084 → 5,124**, not rewritten). `/prague`,
+  `/kashgar`, `/san-juan` byte-identical.
+- **⚠️ 7 old city pages dropped** — `/hamilton` (Bermuda), `/jamestown`, `/marigot`, `/philipsburg`,
+  `/san-marino`, `/vaduz`, `/yaren`. **Not a bug:** the zone-completeness pass picks the _largest_
+  city per timezone, and the denser `cities5000` dump surfaced a larger (if less famous) city in each
+  of these seven micro-state zones (San Marino → Serravalle, Vaduz → Schaan, Hamilton → Pembroke
+  Parish, …), so every timezone stays covered. Their slugs remain **frozen in the registry** (a
+  future re-entry keeps the URL). The dead URLs are the **R-016 layer-3 residual** (redirects,
+  deferred to before indexing #85/R-006; stage is `noindex`, so no live 404s). **Flagged for the
+  coordinator** — recognizable capitals were among them.
+- **Decouple OG (D-019 amended):** new pure **`src/lib/ogPolicy.ts`** —
+  `topOgCitySlugs(cities, k=1000)` → `ReadonlySet<slug>` (top-K by population, deterministic slug
+  tie-break) is the **single SSOT** both OG consumers read. The endpoint
+  (`og/[slug].png.ts`) gates `getStaticPaths` to that set → **exactly 1,000 per-city PNGs render**;
+  `seoMeta` takes a `hasOwnOgCard` flag and emits `/og/<slug>.png` for the top-K, else the shared
+  brand card **`/og/home.png`** (one file, not 4,000 copies). `[city].astro` computes membership once
+  in `getStaticPaths` and passes it through props (frontmatter-only change; body untouched — stays
+  out of #87's way).
+- **Build stays ~flat:** local `npm run build` = **2m 28s** for **5,119 pages** + 1,000 OG PNGs —
+  vs the pre-#90 ~130 s for ~1,085. **Not** the ~10 min a linear 5k-OG build would cost. `dist/`
+  spot-check confirmed the split: `prague` → `og:image=/og/prague.png` (PNG present); tail cities
+  (`schaan`, `yangor`, `serravalle`, `pembroke-parish`) → `og:image=/og/home.png` (no per-city PNG).
+- **⚠️ search-index size (D-016 watch):** `/search-index.json` ships all cities to the client.
+  Gzipped **48.2 KB → 188.5 KB** (raw 169.6 KB → 700.9 KB) at 5,117 cities — `altNames` (≤8)
+  dominates. Under the 200 KB ceiling and **lazily fetched on idle** (off the critical path, D-016),
+  so shipped as-is; **flagged** — if it grows further, trim tail `altNames` or shard (follow-up).
+- **R-011 (OG font):** re-verified **0 non-Latin city names** in the 5,117-city set, so the bundled
+  JetBrains Mono still covers every per-city card; the brand-card fallback remains the safety net.
+- **Verify:** gate green — typecheck (0 errors) / lint / format:check / **test:coverage (376 tests,
+  100 stmts·funcs·lines / 97 branches** on `src/lib`+`src/domain`; new `ogPolicy` + `seoMeta`
+  branch tests). Local `build` (stage + prod) ran clean; sitemap grows to the new city count on the
+  prod build (D-020).
+- **Scope:** `scripts/buildCities.ts`, `scripts/cities5000.sha256` (renamed + re-pinned),
+  `scripts/slug-registry.json` (+4,040), `src/data/cities.json` (regenerated — large but mechanical),
+  new `src/lib/ogPolicy.ts` (+ test), `src/lib/seoMeta.ts` (+ test), `src/pages/og/[slug].png.ts`,
+  `src/pages/[city].astro` (frontmatter only), comment/doc fixes (`geonames.ts`, `dumpChecksum.ts`,
+  `cities.ts`, `dev-flow.md`), docs. **No domain/component-body changes.** Landed after **#87**
+  (`[city].astro` body); rebased onto it — the frontmatter merge is additive (related + OG membership
+  side by side), no body edits.
+
 ## Feature #89 — Favicon + brand mark (Concept C "sundial") + header icon
 
 - **Date:** 2026-07-11

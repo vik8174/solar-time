@@ -224,6 +224,27 @@ Mono (OFL)** bundled — satori needs the font bytes, no system fallback at buil
 failure fails the build (fail-fast). **Trade-off:** ~130 s added to the CI build and no valid
 cross-build caching (see R-010); accepted as CI-only cost. Adopted with slice #9 (PR #54 / issue #9).
 
+**Amendment (2026-07-11, #90) — top-K per-city + brand tail.** Scaling the dataset to ~5,000 cities
+(#90) would make "one satori render per city" dominate the build (linear in city count — R-010, the
+~10 min projection). **Decision:** decouple OG from page count — only the **top-K cities by
+population** (`k = 1000`, matching the pre-#90 coverage so nothing regresses) get a bespoke
+`/og/<slug>.png`; every **tail** city's `og:image` points at the existing shared brand card
+**`/og/home.png`** (one file, not ~4,000 near-identical renders). Build stays ~flat (measured **2m
+28s** for 5,119 pages + 1,000 PNGs, vs the old ~130 s for ~1,085).
+
+**One SSOT for membership — do not duplicate it.** A pure `topOgCitySlugs(cities, k=1000)`
+(`src/lib/ogPolicy.ts`) returns the `ReadonlySet<slug>` of top-K cities (population desc,
+**slug-asc** deterministic tie-break — the shipped `City` carries no `geonameId`, so slug is the
+stable secondary key). **Both** consumers read this one helper: the endpoint `og/[slug].png.ts` gates
+`getStaticPaths` to it (so exactly the top-K PNGs render), and `seoMeta(city, d, hasOwnOgCard)` emits
+the per-city path only when the caller reports membership, else the brand path. If they derived
+membership independently they'd drift → a page pointing at a `/og/<slug>.png` that was never rendered
+(404) or wasted renders no page references. `[city].astro` computes the set **once** in
+`getStaticPaths` and threads each city's membership through props (frontmatter-only; the page body is
+untouched, so #87's parallel body work rebases clean). **Invariant unchanged:** a top-K card's number
+is still the build-date SSOT via `ogCardModel` (R-001); the tail just swaps _which image_ the
+`og:image` names, never a number. Amended with #90.
+
 ## D-020 — Environment-based stage/prod split (`SITE_ENV`) · accepted
 
 The site had no way to differ between stage and prod — `build` was identical and

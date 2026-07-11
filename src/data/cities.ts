@@ -3,11 +3,11 @@
  * recompute, search (slice #6), and default-city resolution.
  *
  * The data is generated at build time by `scripts/buildCities.ts` from the
- * GeoNames `cities15000` dump (CC-BY — footer attribution required, see the
+ * GeoNames `cities5000` dump (CC-BY — footer attribution required, see the
  * footer slice #11) and imported from `cities.json`. IANA zones are stored (not
  * numeric offsets) so DST stays correct across dates.
  *
- * ⚠️ Bundle size: the full registry is ~1000 cities. City pages (`[city].astro`)
+ * ⚠️ Bundle size: the full registry is ~5000 cities (#90). City pages (`[city].astro`)
  * must NOT import this module into their island — they inline their own city's
  * data via `data-*` attributes. Importing here is fine for the home page (`/`,
  * noindex, live geo) and the build.
