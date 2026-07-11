@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Fix #116 — Freeze city slugs so a `cities.json` regeneration can't rename URLs
 
 - **Date:** 2026-07-10
-- **PR:** _pending_ · **Issue:** #116 (R-016)
+- **PR:** [#118](https://github.com/vik8174/solar-drift/pull/118) · **Issue:** #116 (R-016)
 - **What:** Slugs **are** the public `/[city]` URLs, but slug assignment was a function of the
   **whole dataset** (collision → `-{countryCode}`, else `-{geonameId}`). So a city entering or
   leaving the upstream GeoNames dump silently **renamed a _different_ city's URL** — the #91 bug
