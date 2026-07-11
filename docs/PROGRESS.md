@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Fix #123 — Remove the dead × (broken dismiss) from the support note
 
 - **Date:** 2026-07-11
-- **PR:** _pending_ · **Issue:** #123 (`bug`, `afk`)
+- **PR:** [#124](https://github.com/vik8174/solar-drift/pull/124) · **Issue:** #123 (`bug`, `afk`)
 - **What:** The **×** on the "Buy me a coffee ☕" note did nothing. Root cause was a CSS
   specificity bug: `.support { display: flex }` (`Base.astro`) overrode the UA `[hidden] {
 display: none }` at **equal specificity**, so the later author rule won — setting
