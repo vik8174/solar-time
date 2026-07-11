@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Feat #90 — Scale to ~5,000 cities + decouple OG from page count
 
 - **Date:** 2026-07-11
-- **PR:** _pending_ · **Issue:** #90 (`hitl`)
+- **PR:** [#120](https://github.com/vik8174/solar-drift/pull/120) · **Issue:** #90 (`hitl`)
 - **What:** Only ~1,085 cities were searchable/indexable — the cap, not the pool, was the limit.
   Two owner decisions: (1) grow to ~5,000 cities by swapping the GeoNames dump **`cities15000` →
   `cities5000`** and raising `TARGET_SIZE` **900 → 5000**; (2) **decouple OG from page count** so the
