@@ -186,7 +186,7 @@ got a healthy preview channel again (state `CLEAN`, no 429).
 hosting:channel:list/delete` error `"Not in a Firebase app directory"` without `firebase.json`,
 and `--json` hides that error in stdout, so keep the failure-surfacing `cat channels.json`.
 
-## R-016 — Regenerating `cities.json` picks up upstream GeoNames drift · accepted
+## R-016 — Regenerating `cities.json` picks up upstream GeoNames drift · mitigated
 
 `npm run build:cities` refetches the live `cities15000` dump, so **any** regeneration also imports
 whatever changed upstream since the last one — the diff is never "just the field I added".
@@ -195,16 +195,27 @@ dropped out of the population pass (no `cumilla` replacement), `rawson` entered 
 zone-completeness pass, and `san-juan-ar` + `san-juan-pr` **collapsed into a bare `san-juan`** —
 once only one San Juan survived, the collision that forced the country suffix was gone.
 
-**Why accepted:** the generator is deterministic _given a dump_ (verified byte-identical on
-re-run); the input is what moved. Adding `country` required a regeneration, so the drift was
-unavoidable, and nothing references the changed slugs (grepped `src/`, `docs/`, tests — clean).
-The site is stage-only + `noindex`, so the slug churn breaks no indexed URL today.
+**The nasty part:** slug assignment was a function of the **whole dataset**, so a city entering or
+leaving renamed a **different** city's public `/[city]` URL — invisible in code review, only in the
+data. Pinning the dump alone is **not sufficient**: #90 scales the count up on a frozen dump, which
+re-introduces collisions and re-renames slugs.
 
-**What to watch:** those slugs are **public URLs**. Once the site is indexed, a regeneration can
-silently 404 a previously-live `/[city]` page. **Mitigation to consider before going public:**
-pin the dump (commit a checksum / vendor the snapshot) so dataset refreshes become an explicit,
-reviewed act, and/or emit redirects for slugs that disappear. #90 (scale the count) will hit this
-same drift — it regenerates the same file.
+**Mitigated (2026-07-10, fix #116 — layers 1 + 2, see D-026):**
+
+- **Slug registry (the root fix).** `scripts/slug-registry.json` freezes every city's slug by
+  `geonameId`; `toCities` reuses a registered slug verbatim and only assigns fresh slugs to new ids.
+  An existing city's URL **cannot change** when another city enters/leaves — pinned by a regression
+  test that removes a colliding San Juan and asserts the survivor's slug is stable. Seeding was
+  **byte-identical** to the old algorithm (0 slug diffs / 1084 cities), so `cities.json` is unchanged.
+- **Checksum pin.** `scripts/cities15000.sha256` + `buildCities.ts` **fail the build loudly** on
+  upstream drift; `GEONAMES_ACCEPT_DRIFT=1` is the sanctioned bump. A regeneration now either
+  reproduces `cities.json` byte-for-byte or stops with a clear "dump changed — review & bump" error.
+
+**Why `mitigated`, not `resolved`.** Layers 1 + 2 kill the **URL-rename** hazard. The residual: a
+city that genuinely **disappears** upstream still leaves a **dead `/[city]` URL** (no redirect yet).
+That's **layer 3** (redirects / tombstones for departed slugs), deliberately deferred to **before the
+site is indexed** (#85 / R-006) — stage is still `noindex`, so no live URL 404s today. Track layer 3
+there; #90 (scale the count) is now safe on layer 2.
 
 ## R-017 — `scripts/*.test.ts` never ran (dormant tests) · resolved
 

@@ -378,3 +378,49 @@ landing copy; inventing questions would violate the "schema matches the page" ru
 becomes a follow-up once #82 lands. **Note:** `/` is `noindex` today (D-005), so the home nodes are
 inert until #82 — the breadcrumb on the indexable city pages (D-020) is what pays off now.
 Adopted with feature #86.
+
+## D-026 — City slugs frozen by a `geonameId → slug` registry + a dump checksum pin · accepted
+
+Slugs **are** the public `/[city]` URLs (D-005), but slug assignment in `citySlug.ts` was a
+function of **the whole dataset**, not of the city: on a name collision it appended `-{countryCode}`,
+else `-{geonameId}`. So a city entering or leaving the upstream GeoNames dump could **silently rename
+a _different_ city's URL** (R-016). Proven by #91: San Juan (AR) dropped out, the collision vanished,
+and the surviving San Juan (PR) collapsed `san-juan-pr → san-juan`. Pinning the dump alone is **not
+sufficient** — #90 deliberately scales the city count up, which re-introduces collisions and re-renames
+slugs on a frozen dump. **Owner decision (via #116):** ship **layers 1 + 2**; layer 3 (redirects for
+departed cities) is deferred to before indexing (#85 / R-006).
+
+**Layer 2 — the registry is the SSOT for slugs.** A committed **`scripts/slug-registry.json`**
+maps `geonameId → slug`. `toCities(records, registry)` (`scripts/citySlug.ts`) **reuses a
+registered id's slug verbatim** and runs the derivation rule **only** for ids absent from the
+registry, disambiguating a fresh slug against **both** its same-run peers **and** every slug already
+frozen by the registry (base → `-{countryCode}` → `-{geonameId}`). Every fresh assignment is written
+back. It returns `{ cities, registry }` and **never mutates** the input registry. Result: an existing
+city keeps its URL forever; drift and #90's scale-up can only _add_ slugs.
+
+- **Why a registry keyed by `geonameId`, not editing `cities.json`.** `cities.json` carries **no
+  `geonameId`** (slug/name/coords/…), so it can't be the SSOT binding a city to its slug, and it
+  can't be self-seeded. The registry is seeded **during regeneration**, where `GeoNameRecord.geonameId`
+  is available: start empty → `build:cities` derives every slug (historical behaviour) and records it.
+  Verified the empty-registry path is **byte-identical** to the pre-registry algorithm on the current
+  dump (0 slug diffs across 1084 cities), so seeding introduced **zero** churn — `cities.json` is
+  unchanged on `main`.
+- **Byte-stable file:** numeric-`geonameId` key order, 2-space, trailing newline, Prettier-clean —
+  a clean, reviewable diff on every future dataset change.
+
+**Layer 1 — checksum pin (`scripts/cities15000.sha256`).** `buildCities.ts` hashes the **extracted
+`cities15000.txt`** (not the `.zip` — zip metadata isn't byte-stable) and compares it to the committed
+pin **before** doing any work. A mismatch **fails loudly** with both hashes; **`GEONAMES_ACCEPT_DRIFT=1`**
+is the sole sanctioned bump — it skips the compare and **rewrites** the pin (how a future intentional
+refresh like #90 updates it). The pure compare/rewrite decision lives in **`scripts/dumpChecksum.ts`**
+(`sha256` + `reconcileChecksum`) so it's unit-testable **without** the network — kept out of
+`buildCities.ts`, whose `main()` runs on import.
+
+**CI unaffected:** CI runs `npm run build` (reads the committed `cities.json`), **never**
+`build:cities` — the pin and registry only fire on a manual regeneration.
+
+**Hard-to-reverse:** the registry is now authoritative; a slug can only change by an **explicit
+registry edit**, never as a side effect of a dataset refresh. **#116 must land before #90** (#90
+re-churns slugs without layer 2). **Residual (not covered):** a city that _disappears_ upstream still
+leaves a dead URL — the layer-3 redirect pass, deferred to before indexing (R-016 → `mitigated`).
+Adopted with fix #116.
