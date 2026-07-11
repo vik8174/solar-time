@@ -91,7 +91,7 @@ runs `npm run build`, which reads the committed `cities.json`). Two guards keep
 a regeneration from silently changing public `/[city]` URLs:
 
 - **Checksum pin** — the extracted dump is hashed (sha256) and compared to the
-  committed `scripts/cities15000.sha256`. If upstream moved, the build **fails
+  committed `scripts/cities5000.sha256`. If upstream moved, the build **fails
   loudly** (`GeoNames dump changed (sha … ≠ pinned …)`) instead of importing the
   drift. A plain re-run on an unchanged dump is a no-op.
 - **Slug registry** — `scripts/slug-registry.json` maps every `geonameId` to its
@@ -105,7 +105,7 @@ a regeneration from silently changing public `/[city]` URLs:
 GEONAMES_ACCEPT_DRIFT=1 npm run build:cities
 ```
 
-This skips the compare and **rewrites** `scripts/cities15000.sha256` to the new
-hash — an explicit, reviewed act. Commit the updated `cities15000.sha256`,
+This skips the compare and **rewrites** `scripts/cities5000.sha256` to the new
+hash — an explicit, reviewed act. Commit the updated `cities5000.sha256`,
 `slug-registry.json`, and `cities.json` together, and review the `cities.json`
 diff like any other change. Without the flag, a drifted dump is rejected.

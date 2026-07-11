@@ -95,14 +95,23 @@ from rendered pages (noted only in `cities.ts`/`buildCities.ts` source headers).
 (CC BY 4.0)” credit linking geonames.org on **every page** (verified in `dist` on
 city/home/privacy). The R-007 release blocker for attribution is cleared.
 
-## R-010 — OG generation build time · accepted
+## R-010 — OG generation build time · mitigated
 
-Slice #9 (D-019) regenerates ~1085 OG PNGs on every build, adding **~130 s** (~24 MB output,
-~22 KB each). It runs **CI-only** (not in the local `pre-push` loop), so day-to-day dev is
-unaffected. Cross-build caching is **not valid** — each card embeds the build-date deviation
-number (D-003), so a cached image would go stale. **Accepted** for now as a CI-only cost.
-**Watch:** if CI time or the city count grows painful, options are incremental/changed-only
-regeneration, moving OG to a separate job, or dropping to on-demand generation.
+Slice #9 (D-019) regenerated **one OG PNG per city**, adding **~130 s** at ~1,085 cities — and it
+scaled **linearly**, so #90's jump to ~5,000 cities would have pushed OG generation to ~10 min.
+
+**Mitigated (2026-07-11, #90 — decouple OG from page count, see D-019 amendment):** only the
+**top-K by population** (`k = 1000`) render a bespoke `/og/<slug>.png`; every tail city's `og:image`
+falls back to the shared brand card `/og/home.png` (one existing file). OG cost is now a **constant
+~1,000 renders regardless of city count**, not linear. Measured after the scale-up: full
+`npm run build` = **2m 28s for 5,119 pages + 1,000 PNGs** — flat vs the pre-#90 ~130 s, not the ~10
+min a linear 5k build would have cost. The `topOgCitySlugs` SSOT (`src/lib/ogPolicy.ts`) keeps the
+two consumers (the endpoint's `getStaticPaths` and `seoMeta`) in lockstep. Still **CI-only** (not in
+`pre-push`); cross-build caching still invalid (build-date number, D-003).
+
+**Why `mitigated`, not `resolved`:** the top-K cap is now the lever — if `k` is raised or the brand
+tail is later dropped, linear cost returns. **Watch:** revisit `k` if the top-1,000 coverage proves
+too thin once the site is indexed, and consider incremental/changed-only regeneration then.
 
 ## R-011 — OG font glyph coverage · accepted
 
@@ -216,6 +225,18 @@ city that genuinely **disappears** upstream still leaves a **dead `/[city]` URL*
 That's **layer 3** (redirects / tombstones for departed slugs), deliberately deferred to **before the
 site is indexed** (#85 / R-006) — stage is still `noindex`, so no live URL 404s today. Track layer 3
 there; #90 (scale the count) is now safe on layer 2.
+
+**First concrete residual instances (2026-07-11, #90).** Scaling to `cities5000` **dropped 7
+previously-shipped city pages** — `/hamilton` (Bermuda), `/jamestown`, `/marigot`, `/philipsburg`,
+`/san-marino`, `/vaduz`, `/yaren`. **Not a rename and not a bug:** each is a tiny capital that was its
+timezone's sole representative in the sparser `cities15000` dump; the denser `cities5000` dump added a
+_larger_ (if less famous) city in the same micro-zone (San Marino → Serravalle, Vaduz → Schaan,
+Hamilton → Pembroke Parish, …), and the "largest city per zone" completeness pass now picks that one,
+so **every timezone stays covered**. Their slugs remain **frozen in the registry** (layer 2), so a
+future re-entry keeps the exact URL. The 7 dead URLs are precisely the **layer-3** case above — still
+deferred, still harmless while stage is `noindex`. **Flagged to the coordinator** because
+recognizable capitals are among them: if capital coverage matters before indexing, layer 3 (or a
+capital-pinning tweak to the selection) is where it lands.
 
 ## R-017 — `scripts/*.test.ts` never ran (dormant tests) · resolved
 
