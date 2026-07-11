@@ -424,3 +424,40 @@ registry edit**, never as a side effect of a dataset refresh. **#116 must land b
 re-churns slugs without layer 2). **Residual (not covered):** a city that _disappears_ upstream still
 leaves a dead URL — the layer-3 redirect pass, deferred to before indexing (R-016 → `mitigated`).
 Adopted with fix #116.
+
+## D-027 — Per-city prose + related-city links: same-tz-first relation, build-derived · accepted
+
+#87 needed the thin `/[city]` pages to carry unique content and internal links without betraying
+the near-zero-JS posture (D-001/D-013) or the SSOT number (R-001). Two pure `src/lib` helpers under
+the D-012 gate; `[city].astro` + a new `RelatedCities.astro` only render their output.
+
+**Prose is derived, never authored (R-001).** `cityProse(city, deviation)` builds the sentence from
+the **same build-time `Deviation`** the hero shows — magnitude, direction, longitude-vs-zone-meridian
+(read from the **sign of `longitudeOffset`**: positive ⇒ west of the meridian), and the real
+solar-noon clock time. No fabricated city trivia — only what the solar math supports. **Distinct per
+city, not a number-swap template** (the acceptance bar): the opener switches across three magnitude
+bands + the in-sync case, the preposition flips with direction, and the meridian clause varies with
+longitude — so two cities read materially differently, not the same words with a swapped number. Like
+the SEO description (`seoMeta`), it is **baked at build date and not part of the client recompute** —
+the same D-003 trade-off (numbers match the hero exactly at build; ±1-min lifetime drift accepted).
+
+**Relation: same time zone first, nearest by distance as fallback.** Same UTC offset at different
+longitudes ⇒ different solar drift, which is exactly what the tool is about — so `relatedCities`
+leads with same-`timeZone` peers, ranked **most-populous-first with a slug tie-break** (deterministic,
+date-independent → stable built HTML). It **tops up to the cap (6) with the nearest cities by
+great-circle distance**. The fallback is **load-bearing, not an edge case: 272 of ~355 zones in the
+current dataset are singletons** (e.g. `Pacific/Pitcairn`), which would otherwise link to nothing.
+`country` (D-024) was considered as a third axis and **not used** — a weaker relation for a
+solar-drift tool. Distance reuses the existing `haversineKm` (now **exported** from
+`findNearestCity.ts`) and `parseLatitude` (`geoIndex.ts`) — no reinvented geo.
+
+**Build-time only, zero client JS (D-013 upheld).** Both helpers run in `getStaticPaths`/frontmatter
+over the full `CITIES` registry and emit plain crawlable `<a href>` anchors (`data-astro-prefetch`,
+matching search results). Verified the city-page island bundle gains **no city names and no
+`relatedCities`** — perf/bundle untouched. **Slugs are read from the registry, never hardcoded**, so
+a parallel **#116** slug reshuffle is reflected on the next rebuild for free; tests use **synthetic
+fixtures**, not real slugs, for the same reason.
+
+**Constraint learned:** the registry projection (`CITIES.map(toRelatedCity)`) **must live inside**
+`getStaticPaths` — Astro evaluates that function in isolation, so a module-scope const is out of scope
+there and throws `ReferenceError` at build. Adopted with feature #87.

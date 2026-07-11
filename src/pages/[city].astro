@@ -10,22 +10,35 @@ import type { GetStaticPaths } from 'astro';
 
 import Breakdown from '../components/Breakdown.astro';
 import HeroNumber from '../components/HeroNumber.astro';
+import RelatedCities from '../components/RelatedCities.astro';
 import SolarScale from '../components/SolarScale.astro';
 import { IS_PROD } from '../config/site';
 import { CITIES } from '../data/cities';
 import { computeDeviation } from '../domain/solarTime';
 import Base from '../layouts/Base.astro';
 import { buildCityViewModel } from '../lib/cityViewModel';
+import { cityProse } from '../lib/cityProse';
 import { cityBreadcrumbJsonLd, type JsonLdNode } from '../lib/jsonLd';
+import { RELATED_CAP, relatedCities, toRelatedCity } from '../lib/relatedCities';
 import { seoMeta } from '../lib/seoMeta';
 
-export const getStaticPaths = (() =>
-  CITIES.map((city) => ({
+export const getStaticPaths = (() => {
+  // Lean registry projected once, then reused for every page's related-city
+  // pick (parsing latitude 1084× rather than 1084² times). Must live inside
+  // getStaticPaths — Astro evaluates it in isolation, so a module-scope const
+  // would be out of scope here. Slugs are read from the registry, never
+  // hardcoded, so a #116 slug reshuffle is picked up on the next rebuild.
+  const relatedRegistry = CITIES.map(toRelatedCity);
+  return CITIES.map((city) => ({
     params: { city: city.slug },
-    props: { city },
-  }))) satisfies GetStaticPaths;
+    props: {
+      city,
+      related: relatedCities(toRelatedCity(city), relatedRegistry, RELATED_CAP),
+    },
+  }));
+}) satisfies GetStaticPaths;
 
-const { city } = Astro.props;
+const { city, related } = Astro.props;
 
 const deviation = computeDeviation({
   longitude: city.longitude,
@@ -33,6 +46,8 @@ const deviation = computeDeviation({
   date: new Date(),
 });
 const vm = buildCityViewModel({ name: city.name, coords: city.coords }, deviation);
+// Unique, truthful per-city prose from the same build-time deviation (R-001).
+const prose = cityProse({ name: city.name, longitude: city.longitude }, deviation);
 // SEO/share metadata from the same build-time deviation (D-003). City pages are
 // indexable on prod, noindex on stage (D-020).
 const meta = seoMeta({ name: city.name, slug: city.slug }, deviation);
@@ -72,6 +87,10 @@ const jsonLd = (origin: string): JsonLdNode =>
       <SolarScale geometry={vm.geometry} solarNoonLabel={vm.solarNoonLabel} />
 
       <Breakdown rows={vm.breakdown} />
+
+      <p class="prose">{prose}</p>
+
+      <RelatedCities cities={related} />
 
       <div class="share">
         <button type="button" class="share-button" data-share-button hidden>Share</button>
@@ -226,6 +245,15 @@ const jsonLd = (origin: string): JsonLdNode =>
       color: var(--muted);
       text-align: center;
       margin: 0 0 var(--space-lg);
+    }
+    .prose {
+      margin: var(--space-section) auto 0;
+      max-width: 380px;
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--muted);
+      text-align: center;
+      text-wrap: pretty;
     }
     .share {
       margin: var(--space-section) auto 0;
