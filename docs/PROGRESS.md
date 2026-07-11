@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Feature #89 — Favicon + brand mark (Concept C "sundial") + header icon
 
 - **Date:** 2026-07-11
-- **PR:** _pending_ · **Issue:** #89 (hitl)
+- **PR:** [#121](https://github.com/vik8174/solar-drift/pull/121) · **Issue:** #89 (hitl)
 - **What:** replaced Astro's default rocket favicon with the chosen brand mark
   (Concept C — a gold ring + a hand pointing off noon to a sun dot), shipped the
   **full icon set** (previously 404 on prod: `.ico` / apple-touch / manifest),
