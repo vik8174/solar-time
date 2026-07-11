@@ -1,0 +1,88 @@
+---
+/**
+ * RelatedCities — a small block of internal links to a few other `/[city]`
+ * pages, so pages interlink instead of being isolated leaves (issue #87).
+ *
+ * The links are build-time-derived by `relatedCities` (same time zone, then
+ * nearest by distance) and passed in as plain `{ slug, name }` pairs; this
+ * component only renders them. Plain crawlable `<a href>` anchors with
+ * `data-astro-prefetch` (matching the search results) — no client JS, so the
+ * per-page island bundle and Lighthouse score are untouched (D-013). Renders
+ * nothing when the list is empty (defensive — the dataset always yields links).
+ */
+import type { RelatedLink } from '../lib/relatedCities';
+
+interface Props {
+  cities: RelatedLink[];
+}
+const { cities } = Astro.props;
+---
+
+{
+  cities.length > 0 && (
+    <nav class="related" aria-label="Related cities">
+      <h2 class="related-heading">Related cities</h2>
+      <ul class="related-list">
+        {cities.map((c) => (
+          <li>
+            <a href={`/${c.slug}`} data-astro-prefetch>
+              {c.name}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )
+}
+
+<style>
+  .related {
+    margin: var(--space-section) auto 0;
+    max-width: 380px;
+  }
+  .related-heading {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+    margin: 0 0 var(--space-md);
+  }
+  .related-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-sm) var(--space-md);
+  }
+  .related-list a {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    color: var(--text);
+    text-decoration: none;
+    border-bottom: 1px solid var(--axis);
+    padding-bottom: 2px;
+    transition:
+      color 0.2s,
+      border-color 0.2s;
+  }
+  .related-list a:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* Mobile: comfortable tap targets for the link row. */
+  @media (max-width: 480px) {
+    .related-list {
+      gap: var(--space-md) var(--space-lg);
+    }
+    .related-list a {
+      padding-bottom: 4px;
+    }
+  }
+</style>

@@ -22,8 +22,19 @@ export interface NearestCity {
 
 const toRadians = (degrees: number): number => (degrees * Math.PI) / 180;
 
-/** Great-circle distance between two lat/lon points, in kilometres. */
-const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+/**
+ * Great-circle distance between two lat/lon points, in kilometres.
+ *
+ * Exported so the related-cities selector (`relatedCities`) can rank fallback
+ * candidates by distance without reinventing the haversine (issue #87).
+ *
+ * @param lat1 - First point latitude, north positive (degrees).
+ * @param lon1 - First point longitude, east positive (degrees).
+ * @param lat2 - Second point latitude, north positive (degrees).
+ * @param lon2 - Second point longitude, east positive (degrees).
+ * @returns Great-circle distance in kilometres.
+ */
+export const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const dLat = toRadians(lat2 - lat1);
   const dLon = toRadians(lon2 - lon1);
   const a =

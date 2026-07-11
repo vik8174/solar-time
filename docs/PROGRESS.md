@@ -6,6 +6,54 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Feature #87 — Per-city unique prose + related-city internal links
+
+- **Date:** 2026-07-11
+- **PR:** #119 (merged) · **Issue:** #87 (closed)
+- **What:** the thin `/[city]` pages now carry (1) a short, genuinely-unique
+  descriptive sentence-or-two and (2) a "Related cities" block linking a few
+  other city pages — the SEO discoverability slice (unique content + internal
+  linking, spreading crawl/authority instead of leaving pages as isolated leaves).
+- **Per-city prose (`src/lib/cityProse.ts`, pure, D-012):** derived from the
+  **same build-time `Deviation`** the hero/breakdown use (R-001) — magnitude,
+  direction, the longitude-vs-zone-meridian fact, and the real solar-noon clock
+  time. **Genuinely distinct, not a number-swap template:** the opener varies
+  across three magnitude bands (`close` / `runs` / `wide`) and the in-sync case,
+  the direction flips the preposition, and the geographic clause reports which
+  side of the zone meridian the city sits on (read from the sign of
+  `longitudeOffset`). Baked at build like the SEO description — the accepted
+  D-003 trade-off (not part of the client recompute).
+- **Related cities (`src/lib/relatedCities.ts`, pure, D-012):** relation is
+  **same time zone first** (most product-true — same UTC offset, different
+  longitudes ⇒ different solar drift), ranked most-populous-first with a slug
+  tie-break (deterministic, date-independent); **falls back to nearest by
+  great-circle distance** to top up the cap. The fallback is load-bearing, not an
+  edge case: **272 of ~355 zones in the dataset are singletons** (e.g. Adamstown /
+  `Pacific/Pitcairn` → its Pacific neighbours). Reuses the existing
+  `haversineKm` (now exported from `findNearestCity.ts`) and `parseLatitude`
+  (`geoIndex.ts`) — no new distance code. Current city excluded, cap 6.
+- **Build-time only, zero client JS (D-013):** links are derived in
+  `getStaticPaths` over the full `CITIES` registry and emitted as plain crawlable
+  `<a href data-astro-prefetch>` anchors by a new `RelatedCities.astro`. Verified
+  the city-page island bundle carries **no city names / no `relatedCities`** (the
+  only `related*` hit in client JS is Preact's `relatedTarget`). Perf unaffected.
+- **#116 safety:** related links are **derived from the registry at build time**
+  (`/${city.slug}`), never hardcoded, so a parallel #116 slug reshuffle is
+  reflected on the next rebuild for free. Unit tests use **synthetic fixtures**,
+  not real dataset slugs, so they can't break when #116 reshapes the data.
+- **#86 untouched:** the JSON-LD `BreadcrumbList` frontmatter/const on `<Base>`
+  is intact — the prose and related block are additive `.content` body only.
+- **Gotcha recorded in code:** `relatedRegistry` must be projected **inside**
+  `getStaticPaths` — Astro evaluates that function in isolation, so a module-scope
+  const is out of scope there (`ReferenceError` at build until moved in).
+- **Decision:** D-027 (relation ranking + build-time-derived prose/links).
+- **Tests:** 27 new (`cityProse` 10, `relatedCities` 9, + the shared helper) —
+  364 total green; coverage 99.7 / 95.7 / 99 / 100, well above the 90/80 gate.
+- **Verified in-browser** (dev server in the worktree, #114): big-offset
+  `/baoshan-cn` (89 min, same-tz peers), singleton `/adamstown` (nearest
+  fallback), numbers match the hero (R-001); clean at 375 / 768 / 1280 in **both
+  themes**. `npm run build` green — 1086 pages in 2m41s.
+
 ## Fix #116 — Freeze city slugs so a `cities.json` regeneration can't rename URLs
 
 - **Date:** 2026-07-10
