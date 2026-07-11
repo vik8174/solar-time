@@ -461,3 +461,33 @@ fixtures**, not real slugs, for the same reason.
 **Constraint learned:** the registry projection (`CITIES.map(toRelatedCity)`) **must live inside**
 `getStaticPaths` — Astro evaluates that function in isolation, so a module-scope const is out of scope
 there and throws `ReferenceError` at build. Adopted with feature #87.
+
+## D-028 — Brand mark on a dark tile (no `@media` swap) + manual raster generator · accepted
+
+#89 replaced Astro's default favicon with the chosen brand mark (Concept C "sundial" — a gold ring
+with a hand pointing off noon to a sun dot) and shipped the full icon set (`.svg`, `.ico`,
+`apple-touch-icon`, PWA PNGs + `site.webmanifest`), plus the same mark beside the header wordmark
+(the #80 scope-add: "one symbol everywhere").
+
+**One SSOT for the mark: `src/lib/brandMark.ts`.** The mark geometry and colours live in one module
+(gold `#e8a923` = `--accent`, tile `#141414`). `Base.astro` inlines it in the header via `set:html`;
+`scripts/build-favicons.ts` rasterises the _same_ source into every format — so favicon, header icon,
+and OG identity can never drift apart. It sits in `src/lib` (not `scripts/`) so it's importable by the
+Astro layout and covered by the D-012 gate; a small string-assertion test keeps coverage green.
+
+**A dark tile instead of a `prefers-color-scheme` fill swap.** The old default favicon was a monochrome
+shape that swapped black↔white by scheme. Concept C is a _single gold_ mark, and gold on transparent
+goes muddy on a light tab bar. So the mark **carries its own dark rounded tile** — it reads crisply on
+both light and dark browser chrome with **no colour-scheme swap**, and it's exactly the badge the owner
+picked. Verified at true 16px on both a white and a black background (the whole acceptance bar). The
+same badge in the header reads as a small app-icon chip in light theme and blends its tile into the
+near-black background in dark theme — the gold mark stays prominent in both. Stroke weights are bumped
+from the source sketch (ring/hand 3–4 → 9) so the mark survives rasterisation to 16px.
+
+**Raster set is generated, not hand-dropped (matches the `build:cities` ethos).**
+`npm run build:favicons` is **manual, never CI** — CI runs `npm run build`, which serves the committed
+static assets in `public/`. The generator reuses `@resvg/resvg-js` (already a dep, for OG cards) for
+SVG→PNG and adds one exact devDep, **`png-to-ico` (3.0.2)**, for the multi-size `.ico` (16/32/48). The
+`apple-touch-icon` is baked from a **full-bleed opaque square** (radius 0) because iOS composites a
+transparent icon on black and rounds it itself; the tab/PWA icons use the **rounded** badge. Manifest
+`name`/`short_name` = **"Solar Drift"** (post-#94 rename, not the ticket's stale "Solar Time").

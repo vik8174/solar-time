@@ -6,6 +6,49 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Feature #89 — Favicon + brand mark (Concept C "sundial") + header icon
+
+- **Date:** 2026-07-11
+- **PR:** [#121](https://github.com/vik8174/solar-drift/pull/121) · **Issue:** #89 (hitl)
+- **What:** replaced Astro's default rocket favicon with the chosen brand mark
+  (Concept C — a gold ring + a hand pointing off noon to a sun dot), shipped the
+  **full icon set** (previously 404 on prod: `.ico` / apple-touch / manifest),
+  and placed the **same mark beside the header wordmark** (the #80 scope-add —
+  "one symbol everywhere").
+- **One SSOT (`src/lib/brandMark.ts`, D-028):** mark geometry + colours in one
+  module (gold `#e8a923` = `--accent`, tile `#141414`). `Base.astro` inlines it
+  in the header via `set:html`; the generator rasterises the **same** source —
+  favicon, header, and OG identity can't drift. In `src/lib` (not `scripts/`) so
+  the layout can import it and the D-012 gate covers it (string-assertion test).
+- **Dark tile, no `@media` swap (D-028):** the old favicon swapped black↔white by
+  colour scheme; Concept C is a single gold mark, and gold-on-transparent muddies
+  on a light tab bar — so the mark **carries its own dark rounded tile** and reads
+  crisply on both light and dark chrome with no swap. Stroke weights bumped from
+  the sketch (ring/hand 3–4 → 9) for 16px crispness. apple-touch is baked from a
+  **full-bleed opaque square** (iOS composites transparency on black + rounds it
+  itself); tab/PWA icons use the rounded badge.
+- **Reproducible raster set (`scripts/build-favicons.ts`, manual — like
+  `build:cities`):** `npm run build:favicons` reuses `@resvg/resvg-js` (already a
+  dep) for SVG→PNG and adds one exact devDep **`png-to-ico` 3.0.2** for the
+  multi-size `.ico` (16/32/48). CI runs `npm run build`, not the generator, so
+  zero CI cost — the committed `public/*` are the source of truth CI serves.
+- **Head + manifest wired in `Base.astro`:** `favicon.svg` + `favicon.ico` +
+  `apple-touch-icon` + `site.webmanifest` links and `<meta name="theme-color"
+content="#141414">`. `site.webmanifest` `name`/`short_name` = **"Solar Drift"**
+  (post-#94, not the ticket's stale "Solar Time"); icons 192/512 + apple-touch.
+- **Decision:** D-028 (dark-tile brand mark + manual raster generator).
+- **Tests:** `brandMark` (3 assertions on the SVG output) — 388 total green;
+  coverage 99.7 / 95.7 / 99 / 100, well above the 90/80 gate.
+- **Verified in-browser** (dev server in the worktree, #114): all six asset URLs
+  resolve **200**; the sundial mark **legible at true 16px on both a white and a
+  black background** (svg + ico), no colour-scheme swap; header mark sits beside
+  the "Solar Drift" wordmark without breaking the #80 375px layout, in **both
+  themes**; no console errors. `npm run build` green — 1086 pages, manifest
+  `name` = "Solar Drift", all four asset URLs present in `dist/`.
+- **Parallel to #90** (feat/scale-cities): zero shared files — this slice owns
+  `public/*`, `Base.astro`, `src/lib/brandMark.ts`, `scripts/build-favicons.ts`;
+  only `docs/*` is shared (both entries kept). Whoever merges second rebases.
+
 ## Feature #87 — Per-city unique prose + related-city internal links
 
 - **Date:** 2026-07-11

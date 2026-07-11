@@ -16,8 +16,13 @@ import { ClientRouter } from 'astro:transitions';
 import CitySearch from '../components/CitySearch.tsx';
 import { FEEDBACK_URL, GEONAMES_URL, SUPPORT_URL } from '../config/links';
 import { ANALYTICS_ENV } from '../config/site';
+import { BRAND_TILE, brandMarkSvg } from '../lib/brandMark';
 import { serializeJsonLd, type JsonLdNode } from '../lib/jsonLd';
 import '../styles/tokens.css';
+
+// The brand badge, shared with the favicon set (#89) so the mark is one identity
+// everywhere. Decorative in the header — the wordmark is the accessible link text.
+const brandMark = brandMarkSvg();
 
 interface Props {
   /** Document title (also og:title / twitter:title). */
@@ -70,6 +75,10 @@ const structuredData = jsonLd && site ? jsonLd(site.href) : undefined;
     <meta name="generator" content={Astro.generator} />
     {noindex && <meta name="robots" content="noindex" />}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content={BRAND_TILE} />
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
     {canonical && <link rel="canonical" href={canonical} />}
@@ -112,6 +121,7 @@ const structuredData = jsonLd && site ? jsonLd(site.href) : undefined;
         href="/"
         aria-current={Astro.url.pathname === '/' ? 'page' : undefined}
       >
+        <span class="brand-mark" aria-hidden="true" set:html={brandMark} />
         Solar Drift
       </a>
       <CitySearch client:idle />
@@ -229,6 +239,7 @@ const structuredData = jsonLd && site ? jsonLd(site.href) : undefined;
   .site-wordmark {
     display: inline-flex;
     align-items: center;
+    gap: 8px;
     margin-bottom: var(--space-sm);
     font-family: var(--mono);
     font-size: 15px;
@@ -238,6 +249,21 @@ const structuredData = jsonLd && site ? jsonLd(site.href) : undefined;
   }
   .site-wordmark:hover {
     color: var(--accent);
+  }
+  /*
+   * The brand badge (#89) — same sundial-on-tile SVG as the favicon, so the mark
+   * is one identity across tab, header and OG. Decorative (aria-hidden); the
+   * wordmark text is the link's accessible name. Fixed 20px reads as an icon
+   * beside the 15px mono wordmark and doesn't disturb the #80 375px layout.
+   */
+  .brand-mark {
+    display: inline-flex;
+    flex: none;
+  }
+  .brand-mark :global(svg) {
+    display: block;
+    width: 20px;
+    height: 20px;
   }
 
   .support {
