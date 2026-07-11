@@ -6,6 +6,59 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix #116 — Freeze city slugs so a `cities.json` regeneration can't rename URLs
+
+- **Date:** 2026-07-10
+- **PR:** _pending_ · **Issue:** #116 (R-016)
+- **What:** Slugs **are** the public `/[city]` URLs, but slug assignment was a function of the
+  **whole dataset** (collision → `-{countryCode}`, else `-{geonameId}`). So a city entering or
+  leaving the upstream GeoNames dump silently **renamed a _different_ city's URL** — the #91 bug
+  (`san-juan-pr → san-juan` when Argentina's San Juan dropped out). Fixed with the owner-chosen
+  **layers 1 + 2** (checksum pin + slug registry). Layer 3 (redirects for departed cities) is
+  **deferred** to before indexing (R-016 residual). See **ADR D-026**.
+- **Layer 2 — slug registry (root fix):** new committed **`scripts/slug-registry.json`** maps
+  `geonameId → slug`. `toCities(records, registry)` (`scripts/citySlug.ts`) now **reuses a
+  registered id's slug verbatim** and runs the derivation rule **only** for new ids, disambiguating
+  a fresh slug against both same-run peers and every already-frozen slug; it returns
+  `{ cities, registry }` and never mutates the input. An existing city keeps its URL forever; drift
+  and #90's scale-up can only _add_ slugs.
+- **The seeding trap:** `cities.json` carries **no `geonameId`**, so the registry can't be seeded
+  from the shipped dataset — it's seeded **during regeneration** (start empty → `build:cities`
+  derives every slug and records it). Verified the empty-registry path is **byte-identical** to the
+  old algorithm on the current dump (**0 slug diffs / 1084 cities**), so `cities.json` is
+  **unchanged on `main`** — the final regeneration introduced zero churn.
+- **Layer 1 — checksum pin:** `buildCities.ts` hashes the **extracted `cities15000.txt`** (not the
+  `.zip` — metadata isn't byte-stable) and compares it to committed **`scripts/cities15000.sha256`**
+  before doing work. Drift → **fails loudly** with both hashes; **`GEONAMES_ACCEPT_DRIFT=1`** is the
+  sanctioned bump (skips the compare, rewrites the pin — how #90 will refresh). The pure
+  compare/rewrite (`sha256` + `reconcileChecksum`) lives in new **`scripts/dumpChecksum.ts`** so
+  it's unit-testable **without** the network (`buildCities.ts` runs `main()` on import).
+- **CI untouched:** CI runs `npm run build` (reads the committed `cities.json`), **never**
+  `build:cities` — the pin + registry only fire on a manual regeneration.
+- **Registry is validated at the trust boundary:** pure `parseSlugRegistry` (`citySlug.ts`) rejects
+  a non-object, a non-string slug, and — critically — **duplicate slugs across ids** (uniqueness is
+  the registry's whole job). A hand-edit / bad merge mapping two cities to one URL **fails the build
+  loudly** (verified: exit 1, names the slug + both ids), never collapsing silently into a dup route.
+- **Tests (`scripts/*.test.ts`, which now run — R-017):** the core **stability** regression —
+  remove a colliding San Juan and assert the survivor's slug doesn't move (**fails on the old
+  registry-less code**, which renames `san-juan-pr → san-juan`; passes now); add a colliding city
+  and assert the frozen id keeps its slug while the newcomer adapts; new-id assignment + write-back;
+  registry immutability; determinism; `parseSlugRegistry` (non-object / non-string / **duplicate
+  slug** / valid+empty); and `dumpChecksum` (match passes / mismatch throws / `ACCEPT_DRIFT` rewrites
+  / absent-pin throws) — network kept out.
+- **Verify — regeneration end-to-end:** deleted `scripts/.cache/`, ran
+  `GEONAMES_ACCEPT_DRIFT=1 npm run build:cities` (seeds registry + pin), then a plain re-run =
+  **no-op** (pin passes, 0 new slugs, `cities.json` unchanged). Drift path confirmed: a tampered
+  pin fails loudly (exit 1); `ACCEPT_DRIFT` rewrites it. Gate green: typecheck / lint / format:check
+  / **test:coverage (366 tests, 100 stmts·funcs·lines / 97.46 branches** on `src/lib`+`src/domain`;
+  `scripts/` runs but stays out of `coverage.include`, D-012/R-017).
+- **Scope:** `scripts/{buildCities,citySlug,dumpChecksum}.ts` (+ `citySlug`/`dumpChecksum` tests),
+  new `scripts/slug-registry.json` + `scripts/cities15000.sha256`, `.claude/rules/dev-flow.md`
+  (regeneration + `ACCEPT_DRIFT` docs). **`cities.json` byte-unchanged; no `src/` app code.**
+  Ran parallel to #114/#117 (disjoint files). **code-reviewer → PASS WITH NOTES**: both ≥75 notes
+  fixed pre-PR — the registry uniqueness guard above, and extracting `parseSlugRegistry` as a pure,
+  unit-tested function (mirroring `dumpChecksum`).
+
 ## Fix #114 — Worktree `node_modules` symlink broke `astro dev` (island never hydrated)
 
 - **Date:** 2026-07-10

@@ -82,3 +82,30 @@ hand-written logic. See [`vitest.config.ts`](../../vitest.config.ts).
 `npm run build` is **CI-only** — it is not part of the local `pre-push` hook,
 to keep the local loop fast. CI runs it (and the same 1–4 checks) on every push
 and PR.
+
+## Regenerating the city dataset (`build:cities`, R-016)
+
+`npm run build:cities` refetches the **live, unversioned** GeoNames dump and
+rewrites `src/data/cities.json`. It is **manual only** — CI never runs it (CI
+runs `npm run build`, which reads the committed `cities.json`). Two guards keep
+a regeneration from silently changing public `/[city]` URLs:
+
+- **Checksum pin** — the extracted dump is hashed (sha256) and compared to the
+  committed `scripts/cities15000.sha256`. If upstream moved, the build **fails
+  loudly** (`GeoNames dump changed (sha … ≠ pinned …)`) instead of importing the
+  drift. A plain re-run on an unchanged dump is a no-op.
+- **Slug registry** — `scripts/slug-registry.json` maps every `geonameId` to its
+  slug. A registered city keeps its slug **verbatim, forever**; only genuinely
+  new ids get a fresh slug (written back into the registry). So drift and #90's
+  scale-up can only _add_ URLs, never rename one.
+
+**Sanctioned dump bump** (an _intentional_ refresh, e.g. #90): re-run with
+
+```sh
+GEONAMES_ACCEPT_DRIFT=1 npm run build:cities
+```
+
+This skips the compare and **rewrites** `scripts/cities15000.sha256` to the new
+hash — an explicit, reviewed act. Commit the updated `cities15000.sha256`,
+`slug-registry.json`, and `cities.json` together, and review the `cities.json`
+diff like any other change. Without the flag, a drifted dump is rejected.
