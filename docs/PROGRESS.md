@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Feature #87 — Per-city unique prose + related-city internal links
 
 - **Date:** 2026-07-11
-- **PR:** _pending_ · **Issue:** #87 (closed)
+- **PR:** #119 (merged) · **Issue:** #87 (closed)
 - **What:** the thin `/[city]` pages now carry (1) a short, genuinely-unique
   descriptive sentence-or-two and (2) a "Related cities" block linking a few
   other city pages — the SEO discoverability slice (unique content + internal
