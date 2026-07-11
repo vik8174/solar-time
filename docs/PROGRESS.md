@@ -6,6 +6,31 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix #123 — Remove the dead × (broken dismiss) from the support note
+
+- **Date:** 2026-07-11
+- **PR:** _pending_ · **Issue:** #123 (`bug`, `afk`)
+- **What:** The **×** on the "Buy me a coffee ☕" note did nothing. Root cause was a CSS
+  specificity bug: `.support { display: flex }` (`Base.astro`) overrode the UA `[hidden] {
+display: none }` at **equal specificity**, so the later author rule won — setting
+  `note.hidden = true` toggled the attribute but never hid the note. The dismiss was dead
+  **entirely and across sessions**; the jsdom test passed because it asserted the `hidden`
+  _attribute_, not the computed `display`. **Owner decision: remove the dismiss**, not fix it.
+- **Clean removal (revert of slice #11's dismiss):** dropped the `.support-dismiss` `<button>`,
+  the `data-support`/`hidden` attributes on the `<aside>`, the whole support `<script>`
+  (`initSupport` / `readFlag` / `KEY` / the `astro:page-load` listener), and the `.support-dismiss`
+  CSS (desktop + mobile). **Deleted `src/lib/supportVisibility.{ts,test.ts}`** — `shouldShowSupport`
+  / `SUPPORT_DISMISSED` had no other consumers. Two now-stale prose comments referencing the
+  "support-dismiss adapter" (`src/lib/share.ts`, `src/pages/[city].astro`) were retargeted to the
+  geo adapter so the sanity grep stays clean.
+- **Improvement:** the note is now a **static** SSR element — it renders **with JS off** too. Before,
+  JS-off meant the note never appeared (it shipped `hidden` and only JS revealed it).
+- **Verified:** note renders with **no ×** on `/`, `/[city]` (JS on **and** off — raw SSR HTML has
+  `<aside class="support">` with no `hidden` and no reveal script), light **and** dark theme; still
+  absent on `/privacy`. `grep -rn "support-dismiss\|shouldShowSupport\|supportVisibility\|SUPPORT_DISMISSED\|data-support" src/`
+  → clean. Gate green; coverage stayed green (a fully-covered file was removed, not left uncovered).
+- **Docs:** no ADR — reverts a slice-#11 feature, no new architectural contract.
+
 ## Feat #90 — Scale to ~5,000 cities + decouple OG from page count
 
 - **Date:** 2026-07-11

@@ -43,8 +43,8 @@ interface Props {
    */
   jsonLd?: (origin: string) => JsonLdNode | readonly JsonLdNode[];
   /**
-   * Render the quiet, dismissable Buy-Me-a-Coffee note after the result. Set on
-   * the result pages (`/`, `/[city]`); omitted on `/privacy` (D-008).
+   * Render the quiet Buy-Me-a-Coffee note after the result. Set on the result
+   * pages (`/`, `/[city]`); omitted on `/privacy` (D-008).
    */
   support?: boolean;
 }
@@ -130,21 +130,13 @@ const structuredData = jsonLd && site ? jsonLd(site.href) : undefined;
 
     {
       support && (
-        <aside class="support" data-support hidden>
+        <aside class="support">
           <p class="support-note">
             Found this useful?{' '}
             <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">
               Buy me a coffee ☕
             </a>
           </p>
-          <button
-            type="button"
-            class="support-dismiss"
-            data-support-dismiss
-            aria-label="Dismiss support note"
-          >
-            ×
-          </button>
         </aside>
       )
     }
@@ -162,47 +154,6 @@ const structuredData = jsonLd && site ? jsonLd(site.href) : undefined;
     </footer>
   </body>
 </html>
-
-<script>
-  import { SUPPORT_DISMISSED, shouldShowSupport } from '../lib/supportVisibility';
-
-  /**
-   * Thin adapter around the pure `shouldShowSupport` (D-012): read the stored
-   * flag, reveal the note when it should show, and persist a dismissal. Runs on
-   * `astro:page-load` so it re-binds after each View Transition navigation.
-   */
-  const KEY = 'solar-time:support-dismissed';
-
-  const readFlag = (): string | null => {
-    try {
-      return localStorage.getItem(KEY);
-    } catch (error) {
-      // Storage blocked (private mode / disabled) — fail open, show the note.
-      console.warn('support: reading dismiss flag failed', error);
-      return null;
-    }
-  };
-
-  const initSupport = (): void => {
-    const note = document.querySelector<HTMLElement>('[data-support]');
-    const dismiss = document.querySelector<HTMLButtonElement>('[data-support-dismiss]');
-    if (!note || !dismiss) return;
-
-    note.hidden = !shouldShowSupport(readFlag());
-
-    dismiss.addEventListener('click', () => {
-      try {
-        localStorage.setItem(KEY, SUPPORT_DISMISSED);
-      } catch (error) {
-        // Can't persist — still hide it for this session.
-        console.warn('support: persisting dismissal failed', error);
-      }
-      note.hidden = true;
-    });
-  };
-
-  document.addEventListener('astro:page-load', initSupport);
-</script>
 
 <script>
   import { startDeferredInit, trackEvent } from '../scripts/deferredInit';
@@ -287,24 +238,6 @@ const structuredData = jsonLd && site ? jsonLd(site.href) : undefined;
   .support-note a:hover {
     text-decoration: underline;
   }
-  .support-dismiss {
-    flex: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    padding: 0;
-    font-size: 16px;
-    line-height: 1;
-    color: var(--muted-dim);
-    background: transparent;
-    border: none;
-    cursor: pointer;
-  }
-  .support-dismiss:hover {
-    color: var(--muted);
-  }
 
   .site-footer {
     padding: var(--space-md) var(--page-pad-x) var(--space-xl);
@@ -327,7 +260,7 @@ const structuredData = jsonLd && site ? jsonLd(site.href) : undefined;
     color: var(--accent);
   }
 
-  /* Mobile: give the wordmark, footer links and dismiss control a real touch area. */
+  /* Mobile: give the wordmark and footer links a real touch area. */
   @media (max-width: 480px) {
     .site-wordmark {
       min-height: var(--tap-min);
@@ -340,10 +273,6 @@ const structuredData = jsonLd && site ? jsonLd(site.href) : undefined;
       align-items: center;
       min-height: var(--tap-min);
       padding: 0 8px;
-    }
-    .support-dismiss {
-      width: var(--tap-min);
-      height: var(--tap-min);
     }
   }
   .footer-credit {
