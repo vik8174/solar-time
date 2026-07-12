@@ -51,6 +51,34 @@ describe('CitySearch', () => {
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ slug: 'prague' }));
   });
 
+  it('still navigates when a suggestion is tapped on mobile (link never takes focus)', async () => {
+    const user = userEvent.setup();
+    const { onSelect } = renderSearch();
+
+    const input = screen.getByRole('combobox');
+    await user.type(input, 'Prague');
+    const option = await screen.findByRole<HTMLAnchorElement>('option', { name: /Prague/ });
+
+    // Reproduce the mobile tap ordering with native events (userEvent/fireEvent
+    // abstract away the focus semantics this bug hinges on): a tap fires
+    // `pointerdown` inside the box first, then the input loses focus — on mobile
+    // the tapped <a> never takes DOM focus, so `focusout` carries a null
+    // `relatedTarget` — and only then does `click` land. The box must survive the
+    // blur so the click can navigate; otherwise the <ul> unmounts and the tap does
+    // nothing. Desktop focuses the link on click (relatedTarget = a child), so it
+    // never regressed there.
+    option.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    input.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
+    // Let Preact flush the focusout-driven re-render before asserting — setState is
+    // async, so a synchronous check would see the pre-unmount DOM and pass falsely.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(screen.queryByRole('listbox')).not.toBeNull();
+
+    await user.click(option);
+    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ slug: 'prague' }));
+  });
+
   it('closes the listbox and clears the field after selecting a city', async () => {
     const user = userEvent.setup();
     const { onSelect } = renderSearch();
