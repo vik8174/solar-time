@@ -17,13 +17,22 @@ interface Props {
    * `<h1>` is the page's single heading, so the number must not emit one too.
    */
   as?: 'h1' | 'p';
+  /**
+   * Play the one-time "sunrise" entrance (rise + fade, #84). Default `true` for
+   * `/[city]`, where the SSR value is stable and *is* the real answer. The
+   * landing (`/`) passes `false`: its SSR number is the misleading Neutral
+   * default (D-029), so animating it in would be a lie — and it is the LCP
+   * element, so a fade-in would also delay paint. On `/` the meaningful motion
+   * is the value crossfade when the resolved value lands (index.astro).
+   */
+  entrance?: boolean;
 }
-const { heroValue, showUnit, leadText, solarNoonText, as = 'h1' } = Astro.props;
+const { heroValue, showUnit, leadText, solarNoonText, as = 'h1', entrance = true } = Astro.props;
 const Tag = as;
 ---
 
 <div class="hero-block">
-  <Tag class="hero" class:list={[{ synced: !showUnit }]}>
+  <Tag class="hero" class:list={[{ synced: !showUnit, entrance }]}>
     <span data-hero-value>{heroValue}</span><span class="unit" data-hero-unit hidden={!showUnit}
       >min</span
     >
@@ -45,7 +54,12 @@ const Tag = as;
     color: var(--accent);
     font-variant-numeric: tabular-nums;
     margin: 0;
-    animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  /* Sunrise entrance — opted in per page (see the `entrance` prop). transform +
+     opacity only (no reflow); the shared motion tokens keep it in one language
+     with the crossfade + pulse. prefers-reduced-motion disables it (tokens.css). */
+  .hero.entrance {
+    animation: rise var(--motion-base) var(--ease-out) both;
   }
   .hero.synced {
     font-size: clamp(32px, 9vw, 52px);

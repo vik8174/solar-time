@@ -98,22 +98,31 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
   <main class="page" data-home-longitude={neutral.longitude} data-home-timezone={neutral.timeZone}>
     <div class="content">
       <section class="tool" aria-label="Solar time for your location">
-        <p class="eyebrow">
-          <span data-eyebrow-primary>{vm.cityName}</span>
-          <span class="eyebrow-note" data-eyebrow-note>Estimated for your region</span>
-        </p>
+        {
+          /* The resolved-value region — the eyebrow + number + scale + breakdown
+            all repaint together (SSG default → timezone estimate → 📍 fix), so
+            they crossfade as one unit (anim 3, #84). The 📍 control below stays
+            outside so it never fades mid-interaction. */
+        }
+        <div class="result" data-result>
+          <p class="eyebrow">
+            <span data-eyebrow-primary>{vm.cityName}</span>
+            <span class="eyebrow-note" data-eyebrow-note>Estimated for your region</span>
+          </p>
 
-        <HeroNumber
-          as="p"
-          heroValue={vm.heroValue}
-          showUnit={vm.showUnit}
-          leadText={vm.leadText}
-          solarNoonText={vm.solarNoonText}
-        />
+          <HeroNumber
+            as="p"
+            entrance={false}
+            heroValue={vm.heroValue}
+            showUnit={vm.showUnit}
+            leadText={vm.leadText}
+            solarNoonText={vm.solarNoonText}
+          />
 
-        <SolarScale geometry={vm.geometry} solarNoonLabel={vm.solarNoonLabel} />
+          <SolarScale geometry={vm.geometry} solarNoonLabel={vm.solarNoonLabel} />
 
-        <Breakdown rows={vm.breakdown} />
+          <Breakdown rows={vm.breakdown} />
+        </div>
 
         <div class="geo">
           <button type="button" class="geo-button" data-geo-button>📍 Use my location</button>
@@ -203,6 +212,46 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
       const button = document.querySelector<HTMLButtonElement>('[data-geo-button]');
       const hint = document.querySelector<HTMLElement>('[data-geo-hint]');
       if (!root || !button || !hint) return;
+
+      // Value crossfade (anim 3, #84). The paint below swaps the number/breakdown/
+      // labels in place; wrapping the swap in a quick fade-out → mutate → fade-in
+      // turns the SSG→estimate→📍 jump into a calm crossfade (and smooths the
+      // recompute jank). The fade itself is a CSS transition on [data-result]
+      // (tokens.css → reduced-motion neutralises it), but the timing is JS, so we
+      // ALSO honour prefers-reduced-motion here: matched → mutate instantly, no
+      // setTimeout. Two layers, per the #84 brief. `--motion-fast` is the SSOT for
+      // the duration — read it so the JS half-fade matches the CSS transition.
+      const result = root.querySelector<HTMLElement>('[data-result]');
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const fadeMs =
+        parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--motion-fast')) ||
+        180;
+      let fadeTimer: ReturnType<typeof setTimeout> | undefined;
+      const crossfade = (mutate: () => void): void => {
+        if (!result || reducedMotion.matches) {
+          mutate();
+          return;
+        }
+        result.classList.add('is-swapping');
+        // A newer swap supersedes a pending one: clear the in-flight timer so a
+        // stale paint (e.g. the tz-estimate fade still pending when 📍 fires)
+        // can't land after the state moved on — the fade-out just carries into
+        // the newer value.
+        if (fadeTimer !== undefined) clearTimeout(fadeTimer);
+        fadeTimer = setTimeout(() => {
+          fadeTimer = undefined;
+          // A throwing paint (computeDeviation / buildCityViewModel / scaleInnerSvg
+          // on some edge input) must never leave the region stuck invisible —
+          // remove the class in `finally`, mirroring the default-recompute guard.
+          try {
+            mutate();
+          } catch (error) {
+            console.warn('home: crossfade paint failed', error);
+          } finally {
+            result.classList.remove('is-swapping');
+          }
+        }, fadeMs);
+      };
 
       const browserTimeZone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone;
       let geoIndex: readonly GeoCity[] | null = null;
@@ -317,8 +366,13 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
             const picked = resolveDefaultCity(browserTimeZone(), zones, largest);
             const entry = geoIndex.find((g) => g.slug === picked.slug);
             if (entry) {
-              render(entry.lon, picked.timeZone);
-              setEyebrow(entry.name, 'Estimated from your time zone');
+              // Real change (different city/value) → crossfade. The step-1
+              // same-city recompute above paints directly (nothing visibly
+              // changes, so a fade there would just flicker).
+              crossfade(() => {
+                render(entry.lon, picked.timeZone);
+                setEyebrow(entry.name, 'Estimated from your time zone');
+              });
             }
           }
         } catch (error) {
@@ -344,10 +398,13 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
         dispatch({ type: 'REQUEST' });
         void getCurrentPosition({ timeoutMs: DEFAULT_TIMEOUT_MS })
           .then(({ lat, lon }) => {
-            render(lon, browserTimeZone());
             const nearest = geoIndex ? findNearestCity(lat, lon, geoIndex) : null;
             const label = locatedLabel(nearest);
-            setEyebrow(label.primary, label.near ?? '');
+            // Real change (📍 fix) → crossfade the number/labels in (anim 3, #84).
+            crossfade(() => {
+              render(lon, browserTimeZone());
+              setEyebrow(label.primary, label.near ?? '');
+            });
             // Anonymous "geolocation was used" event — deliberately carries NO
             // coordinates (PRD story 29/30); the fix never leaves the browser.
             trackEvent('geolocation_used');
@@ -384,6 +441,17 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
        needs to sit above the number. */
     .tool {
       margin-top: 0;
+    }
+
+    /* Value crossfade (anim 3, #84) — the resolved-value region dips to
+       transparent and back while its contents swap (orchestrated in the island
+       above). opacity only, so no layout shift; prefers-reduced-motion disables
+       the transition (tokens.css), making the swap instant. */
+    .result {
+      transition: opacity var(--motion-fast) var(--ease-out);
+    }
+    .result.is-swapping {
+      opacity: 0;
     }
 
     /* Explainer — the "what is solar time?" <h1> + definition, BELOW the tool
