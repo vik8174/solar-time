@@ -17,7 +17,7 @@
  * custom domain later is a one-line change here (R-006).
  */
 
-const PROD_URL = 'https://solar-time-prod.web.app';
+const PROD_URL = 'https://solardrift.app';
 const STAGE_URL = 'https://solar-time-stage.web.app';
 
 /** True only for a `SITE_ENV=prod` build (the manual `deploy:prod`). */
