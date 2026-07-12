@@ -6,6 +6,37 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix #126 — Back-nav to `/` showed a stale "In sync"
+
+- **Date:** 2026-07-12
+- **PR:** _pending_ · **Issue:** #126 (`bug`, `afk`)
+- **What:** the home geo island (`src/pages/index.astro` `<script>`) ran its recompute at **module
+  scope**, inside a one-shot `if (root && button && hint) { … }`. Astro runs a module `<script>` **once
+  per full load** and does **not** re-run it across a View-Transition navigation, so on **Back** to `/`
+  `<ClientRouter />` swapped `<main>` back to the SSR **Neutral default** (Shanghai, ~in-sync) and the
+  island never re-fired — the hero (now the above-the-fold number since #82) stayed stuck on a stale
+  **"In sync"** instead of the visitor's own estimate. `[city].astro` already avoided this via its
+  `astro:page-load` re-bind (`initShare`); the home island had simply never adopted the pattern.
+- **Fix:** re-scoped the whole block into a named **`initHome()`** registered **once** at module scope
+  on **`astro:page-load`** (fires on the first full load _and_ every nav — the `initShare` twin). The
+  DOM queries (`root`/`button`/`hint`) and the mutable state (`geoIndex`, reducer `state`) now live
+  **inside** `initHome`, so each navigation starts on the fresh swapped-in nodes with clean state and
+  the fresh button gets the listener (the detached one is GC'd — no stacking, no leak).
+- **Re-entrancy guard:** because `initHome` is now re-entrant, all DOM writes (`setText`/`paint`/
+  `setEyebrow`) query relative to **this invocation's `root`** instead of the global `document`. A
+  slower async continuation (the `/tz-index.json` + `/geo-index.json` fetch, or a 📍 flow) that
+  resolves _after_ the visitor navigated away and back now writes into a **detached `<main>`** — dead
+  nodes — instead of clobbering the fresh page's hero. `renderControls` was already safe (it uses the
+  closure-captured `button`/`hint`).
+- **Scope:** `src/pages/index.astro` `<script>` only — no new DOM, no `src/lib`/`src/domain` change,
+  so no unit-test delta; the re-scope exposed no new pure seam.
+- **Verification (`/browser`, both themes):** `/` → `/privacy` → **Back** paints the estimate (+127,
+  "Estimated from your time zone"), never "In sync"; same for a `/shanghai` → Back. Repeated navs stay
+  consistent (no stacked listeners / stale state); fresh-load estimate paint, 📍 flow, and reducer
+  state unregressed. Gate green (typecheck / lint / format / 400 tests).
+- **Related:** #82 / D-029 (made the number the above-the-fold hero, so this was maximally visible),
+  the `[city].astro` `initShare` pattern, D-013 (bundle isolation — unchanged).
+
 ## Feat #82 — `/` becomes an indexable SEO landing (amends D-005)
 
 - **Date:** 2026-07-11
