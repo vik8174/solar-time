@@ -6,6 +6,23 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Chore — v1 launch prep: hide donation + set prod domain
+
+- **Date:** 2026-07-12
+- **PR:** _pending_ · **Issue:** #128 (closed) · **Risk:** R-006 (resolves on deploy)
+- **What:** Coordinator-authored release-prep for the v1 prod launch (config/ops only).
+  1. **Donation temporarily hidden** (#128) — new `SUPPORT_ENABLED = false` flag in
+     `src/config/links.ts` gates the support note (`Base.astro`) **and** the footer "Support"
+     link. BMC has no payout connected and #81 replaces it with LiqPay; all markup/CSS/`SUPPORT_URL`
+     kept in place, so re-enabling is a one-line flip (with #81's URL swap). Footer is now
+     **Privacy · Feedback** (CSS-`gap` separators — no dangling divider).
+  2. **Prod domain set** — `PROD_URL` in `src/config/site.ts` → `https://solardrift.app` (was the
+     Firebase default `solar-time-prod.web.app`), so canonical / OG / sitemap URLs are the final
+     domain from launch day (clean SEO, no `.web.app`→domain migration). R-006 resolves once the
+     domain is attached in Firebase + DNS/SSL live and `deploy:prod` ships.
+- **Scope:** `src/config/links.ts`, `src/config/site.ts`, `src/layouts/Base.astro` — visual/config
+  only, no domain/`src/lib` logic. Deployed via the manual `deploy:prod` after the domain attaches.
+
 ## Feat #84 — Restrained motion layer (3 animations)
 
 - **Date:** 2026-07-12

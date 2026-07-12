@@ -57,9 +57,10 @@ the release slice. **Action:** buy + wire DNS + Firebase custom domain at releas
 also flip repo public and add analytics keys then.
 **Chosen (2026-07-08):** **`solardrift.app`** — verified free (RDAP + no NS), matches the
 Solar Drift brand (#94), `.app` = TLD-enforced HTTPS (zero friction with Firebase Hosting).
-Recommended registrar: Cloudflare (at-cost, ~$14/yr, free WHOIS privacy). **Still pending
-purchase** (owner action); once bought → attach in Firebase console → swap `site` in
-`src/config/site.ts` → redeploy → resolve.
+Recommended registrar: Cloudflare (at-cost, ~$14/yr, free WHOIS privacy). **Config swapped (2026-07-12):** `PROD_URL` in `src/config/site.ts` now points at
+`https://solardrift.app` (v1 launch-prep PR). **Remaining owner steps to fully resolve:**
+buy the domain → attach in the Firebase console → confirm DNS/SSL live → run `deploy:prod`.
+Once the domain serves the prod build, mark this **resolved**.
 
 ## R-007 — Repo still private · resolved
 

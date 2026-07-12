@@ -17,6 +17,15 @@
 /** Buy-Me-a-Coffee donation link (plain link, not the JS widget — D-008). */
 export const SUPPORT_URL = 'https://buymeacoffee.com/viktorkurysh';
 
+/**
+ * Master switch for the donation UI (the support note + the footer "Support"
+ * link). **Temporarily `false`** for the v1 launch: Buy-Me-a-Coffee has no
+ * payout connected, and #81 replaces it with LiqPay (PrivatBank ФОП). Flip back
+ * to `true` when #81 ships a working link (and swap `SUPPORT_URL` → LiqPay). All
+ * markup/CSS is kept in place, so re-enabling is this one line.
+ */
+export const SUPPORT_ENABLED = false;
+
 /** Hosted Tally feedback form — collects feedback without exposing a personal email. */
 export const FEEDBACK_URL = 'https://tally.so/r/5B58XQ';
 
