@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Fix — mobile: tapping a city suggestion did nothing (list closed, no nav)
 
 - **Date:** 2026-07-12
-- **PR:** _pending_ · **Issue:** #133 · **Outcome:** shipped
+- **PR:** [#134](https://github.com/vik8174/solar-drift/pull/134) · **Issue:** #133 (closed) · **Outcome:** shipped
 - **What:** On touch browsers, tapping a `CitySearch` suggestion closed the dropdown but never
   navigated to the city — the current page stayed. Desktop was fine. **Root cause:** the container's
   `onFocusOut` closes the list when focus leaves with a `relatedTarget` that isn't a child. Desktop
