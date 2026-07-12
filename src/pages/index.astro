@@ -187,17 +187,35 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
     import { resolveDefaultCity, type ZoneCity } from '../lib/resolveDefaultCity';
     import { scaleInnerSvg } from '../lib/scaleSvg';
 
-    const root = document.querySelector<HTMLElement>('[data-home-longitude]');
-    const button = document.querySelector<HTMLButtonElement>('[data-geo-button]');
-    const hint = document.querySelector<HTMLElement>('[data-geo-hint]');
+    /**
+     * Home geo island (#126) — recompute + timezone-estimate + 📍, re-runnable
+     * on every navigation. Registered on `astro:page-load` (below) because
+     * `<main>` is swapped (not persisted) on every View-Transition nav, so on
+     * Back/Forward to `/` the SSR *Neutral default* ("In sync") would otherwise
+     * stick — the module `<script>` runs only once per full load. Twin of
+     * `[city].astro`'s `initShare`: re-query the DOM and re-declare the mutable
+     * state (`geoIndex`, reducer `state`) *inside* so each navigation starts on
+     * the fresh nodes with clean state, and the fresh button gets the listener
+     * (the detached one is GC'd — no leak, no stacking).
+     */
+    const initHome = (): void => {
+      const root = document.querySelector<HTMLElement>('[data-home-longitude]');
+      const button = document.querySelector<HTMLButtonElement>('[data-geo-button]');
+      const hint = document.querySelector<HTMLElement>('[data-geo-hint]');
+      if (!root || !button || !hint) return;
 
-    if (root && button && hint) {
       const browserTimeZone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone;
       let geoIndex: readonly GeoCity[] | null = null;
       let state: GeoState = initialGeoState;
 
+      // All DOM writes query relative to *this invocation's* `root`, never the
+      // global `document` — so if a slower async continuation (the tz/geo fetch
+      // below) resolves after the visitor has navigated away and back, its
+      // `root` is a detached `<main>` and every write lands on dead nodes
+      // instead of clobbering the fresh page's hero (#126 re-entrancy guard;
+      // the twin `initShare` gets this for free via closure-captured elements).
       const setText = (selector: string, text: string): void => {
-        const el = document.querySelector(selector);
+        const el = root.querySelector(selector);
         if (el) el.textContent = text;
       };
 
@@ -208,20 +226,20 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
         setText('[data-lead]', model.leadText);
         setText('[data-solar-noon]', model.solarNoonText);
         setText('[data-scale-noon]', model.solarNoonLabel);
-        const unit = document.querySelector<HTMLElement>('[data-hero-unit]');
+        const unit = root.querySelector<HTMLElement>('[data-hero-unit]');
         if (unit) unit.hidden = !model.showUnit;
-        document.querySelector('.hero')?.classList.toggle('synced', model.inSync);
-        const scale = document.querySelector('[data-scale]');
+        root.querySelector('.hero')?.classList.toggle('synced', model.inSync);
+        const scale = root.querySelector('[data-scale]');
         if (scale) scale.innerHTML = scaleInnerSvg(model.geometry);
         for (const r of model.breakdown) {
           setText(`[data-row-value="${r.key}"]`, r.value);
-          document.querySelector(`[data-row="${r.key}"]`)?.classList.toggle('zero', r.zero);
+          root.querySelector(`[data-row="${r.key}"]`)?.classList.toggle('zero', r.zero);
         }
       };
 
       const setEyebrow = (primary: string, note: string): void => {
         setText('[data-eyebrow-primary]', primary);
-        const noteEl = document.querySelector<HTMLElement>('[data-eyebrow-note]');
+        const noteEl = root.querySelector<HTMLElement>('[data-eyebrow-note]');
         if (noteEl) {
           noteEl.textContent = note;
           // Hide the line entirely when empty, so it reserves no vertical space.
@@ -337,7 +355,13 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
           })
           .catch(dispatchForError);
       });
-    }
+    };
+
+    // Register once at module scope (the module hoists a single time, so no
+    // double-binding); `astro:page-load` fires on the first full load AND on
+    // every View-Transition navigation, so `initHome` re-runs on Back/Forward
+    // to `/` — the fix for the stale "In sync" (#126).
+    document.addEventListener('astro:page-load', initHome);
   </script>
 
   <style>
