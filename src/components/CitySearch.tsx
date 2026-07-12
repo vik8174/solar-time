@@ -82,6 +82,12 @@ export default function CitySearch({
   const [open, setOpen] = useState(false);
   const optionRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  // True while a pointer press that began inside the box is still down. On mobile
+  // a tapped result `<a>` never takes DOM focus, so the input blurs with a null
+  // `relatedTarget` and the `focusout` guard below would close the list — unmounting
+  // the link before its own `click` can navigate. This flag lets `focusout` tell a
+  // press-inside (keep open; the ensuing click selects) from a genuine focus-out.
+  const pointerDownInside = useRef(false);
 
   // Load + build the fuzzy index once, after hydration. A failed load is logged
   // and leaves the box inert rather than throwing an unhandled rejection.
@@ -150,14 +156,30 @@ export default function CitySearch({
   return (
     <div
       className="city-search"
+      // Track a pointer press that started inside the box so `focusout` can keep the
+      // list open for the tap's own click (see `pointerDownInside`). `onPointerUp`
+      // and `onPointerCancel` clear it so a later focus-out still closes.
+      onPointerDown={() => {
+        pointerDownInside.current = true;
+      }}
+      onPointerUp={() => {
+        pointerDownInside.current = false;
+      }}
+      onPointerCancel={() => {
+        pointerDownInside.current = false;
+      }}
       // `onFocusOut` (native, bubbling `focusout`) — NOT `onBlur`: Preact attaches
       // `onBlur` as a literal non-bubbling `blur` listener on this div, so it would
       // never fire for focus leaving the inner input (React's synthetic onBlur
       // bubbles; plain Preact's does not). `focusout` bubbles from the input up.
       onFocusOut={(event) => {
-        // Close unless focus moved to a child (e.g. a result link). `relatedTarget`
-        // is `EventTarget | null`; narrow to `Node` so `.contains` stays type-safe
-        // and a focus-to-nothing (null) correctly closes the box.
+        // A tap inside the box (e.g. a result link on mobile, which never takes DOM
+        // focus) blurs the input with a null `relatedTarget`; keep the list open so
+        // the ensuing click can navigate. The click's `selectCity` closes it.
+        if (pointerDownInside.current) return;
+        // Otherwise close unless focus moved to a child (e.g. a result link on
+        // desktop, which does focus). `relatedTarget` is `EventTarget | null`; narrow
+        // to `Node` so `.contains` stays type-safe and a focus-to-nothing closes.
         const next = event.relatedTarget;
         if (!(next instanceof Node) || !event.currentTarget.contains(next)) setOpen(false);
       }}

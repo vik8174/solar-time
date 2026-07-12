@@ -6,6 +6,28 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix — mobile: tapping a city suggestion did nothing (list closed, no nav)
+
+- **Date:** 2026-07-12
+- **PR:** _pending_ · **Issue:** #133 · **Outcome:** shipped
+- **What:** On touch browsers, tapping a `CitySearch` suggestion closed the dropdown but never
+  navigated to the city — the current page stayed. Desktop was fine. **Root cause:** the container's
+  `onFocusOut` closes the list when focus leaves with a `relatedTarget` that isn't a child. Desktop
+  focuses the tapped `<a>` on click (`relatedTarget` = a child → list stays open → the click
+  navigates); mobile browsers **don't move DOM focus onto a tapped link**, so the input blurred with
+  `relatedTarget = null` → the list closed → the `<ul>` unmounted **before the tap's own `click`
+  could fire** → nothing happened.
+- **Fix:** a `pointerDownInside` ref (set on the container's `onPointerDown`, cleared on
+  `onPointerUp`/`onPointerCancel`) lets `onFocusOut` distinguish a press that began inside the box
+  (keep the list open — the ensuing `click` runs `selectCity`, which closes it) from a genuine
+  focus-out (close as before). `pointerdown` fires first in every gesture, so the flag is ready by
+  the time `focusout` runs. Keyboard/Enter, the clear (×) button, and outside-tap-to-close are all
+  unaffected.
+- **Scope:** `src/components/CitySearch.tsx` (+ `CitySearch.test.tsx`). A new behavioral test
+  dispatches the exact native mobile ordering (`pointerdown` on the option → `focusout` with a null
+  `relatedTarget` → `click`) — RED before the fix, GREEN after. Full suite 401✓, no ADR (behavior
+  fix, no contract change).
+
 ## Fix #131 — one brand OG card for every page (drop per-city cards)
 
 - **Date:** 2026-07-12
