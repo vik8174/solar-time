@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Fix — mobile suggestion tap navigates (real fix; #134 was ineffective on device)
 
 - **Date:** 2026-07-12
-- **PR:** _pending_ · **Issue:** #135 (closed) · **Risk:** R-019 (new) · supersedes #134
+- **PR:** [#136](https://github.com/vik8174/solar-drift/pull/136) · **Issue:** #135 (closed) · **Risk:** R-019 (new) · supersedes #134
 - **What:** the mobile city-tap bug (#133) shipped a fix in #134 that **did not work on real
   devices** — the owner confirmed tapping a suggestion still selected nothing. This is the real fix,
   verified end-to-end on **Playwright WebKit / iPhone 13**.
