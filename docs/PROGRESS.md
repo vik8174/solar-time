@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Feat #84 — Restrained motion layer (3 animations)
 
 - **Date:** 2026-07-12
-- **PR:** _pending_ · **Issue:** #84 (`enhancement`, `afk`)
+- **PR:** [#129](https://github.com/vik8174/solar-drift/pull/129) · **Issue:** #84 (`enhancement`, `afk`)
 - **What:** a calm, polish-not-spectacle motion layer, all `transform`/`opacity` only (GPU-composited,
   zero layout shift), speaking one language via new motion tokens in `tokens.css` (D-006 SSOT):
   `--motion-fast` (180ms), `--motion-base` (400ms), `--motion-pulse` (1.4s), `--ease-out`. No ADR —
