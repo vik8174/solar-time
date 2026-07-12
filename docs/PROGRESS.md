@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Feat #82 — `/` becomes an indexable SEO landing (amends D-005)
 
 - **Date:** 2026-07-11
-- **PR:** _pending_ · **Issue:** #82 (`enhancement`, `hitl`)
+- **PR:** [#125](https://github.com/vik8174/solar-drift/pull/125) · **Issue:** #82 (`enhancement`, `hitl`)
 - **What:** `/` was `noindex` (D-005): per-visitor live-geo with no stable URL content. #82 turns `/`
   into a real indexable landing while keeping the live tool as its hero — the **only thing above the
   fold**. The keyword phrase lives in a **site-wide brand tagline** ("How far your clock is from the
