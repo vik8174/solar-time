@@ -96,7 +96,7 @@ from rendered pages (noted only in `cities.ts`/`buildCities.ts` source headers).
 (CC BY 4.0)” credit linking geonames.org on **every page** (verified in `dist` on
 city/home/privacy). The R-007 release blocker for attribution is cleared.
 
-## R-010 — OG generation build time · mitigated
+## R-010 — OG generation build time · resolved
 
 Slice #9 (D-019) regenerated **one OG PNG per city**, adding **~130 s** at ~1,085 cities — and it
 scaled **linearly**, so #90's jump to ~5,000 cities would have pushed OG generation to ~10 min.
@@ -110,11 +110,20 @@ min a linear 5k build would have cost. The `topOgCitySlugs` SSOT (`src/lib/ogPol
 two consumers (the endpoint's `getStaticPaths` and `seoMeta`) in lockstep. Still **CI-only** (not in
 `pre-push`); cross-build caching still invalid (build-date number, D-003).
 
-**Why `mitigated`, not `resolved`:** the top-K cap is now the lever — if `k` is raised or the brand
-tail is later dropped, linear cost returns. **Watch:** revisit `k` if the top-1,000 coverage proves
-too thin once the site is indexed, and consider incremental/changed-only regeneration then.
+**Was `mitigated` (#90):** the top-K cap was the lever — if `k` were raised or the brand tail dropped,
+linear cost returned.
 
-## R-011 — OG font glyph coverage · accepted
+**Resolved (2026-07-12, #131 — one brand card for every page, see D-019 amendment).** The per-city
+render was dropped **entirely**: every page's `og:image` now points at the single, numberless brand
+card `/og/home.png`, so OG cost is a **constant one render regardless of city count** — the top-K lever
+is gone (`ogPolicy`/`topOgCitySlugs` deleted). This was driven by a **correctness** bug, not just build
+weight: the baked per-city number went stale with DST + the equation of time (a raster can't recompute
+for today, D-003). Measured local `npm run build`: **9.19 s for 5,119 pages + 1 PNG**, vs the ~2m28s
+recorded for 5,119 pages + 1,000 PNGs — the ~1,000 per-city renders are eliminated. No lever left to
+re-introduce linear cost, so **resolved**. (The separate `<meta description>` staleness is flagged in
+D-019's amendment as an out-of-scope content decision — text, not a build-cost concern.)
+
+## R-011 — OG font glyph coverage · resolved
 
 The OG card renders the city name with bundled **JetBrains Mono** (D-019). The current dataset is
 Latin-script, but the registry can grow to include **non-Latin city names** (Cyrillic, CJK, Arabic,
@@ -129,6 +138,14 @@ try/catch already degrades that one city to the brand card (`renderOgCard.ts`) �
 breaks and no tofu ships. Bundling broad-coverage fonts (Noto CJK/Arabic ≈ tens of MB) for names
 that don't exist would be speculative build bloat (YAGNI). **Revisit only if** a non-Latin name
 enters the registry — and even then the brand-card fallback may stay the deliberate choice.
+
+**Resolved (2026-07-12, #131 — no per-city card renders any city name).** The risk was entirely
+about satori rendering an arbitrary **city name** (whose glyphs the bundled JetBrains Mono might lack).
+#131 deletes per-city OG generation (`renderCityCard`, D-019 amendment): every page now uses the single
+brand card `/og/home.png`, which draws only fixed brand text ("Solar Drift" + the English tagline) — no
+dataset-derived string ever reaches satori. So there is **no uncovered-glyph surface left**, whatever the
+registry grows to include; the `renderCityCard` try/catch fallback this note described no longer exists
+because there is nothing per-city to fall back _from_. Moot by construction → **resolved**.
 
 ## R-012 — Preact event model differs from React · mitigated
 
