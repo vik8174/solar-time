@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Fix — hero entrance no longer replays on city→city nav (mobile multi-render feel)
 
 - **Date:** 2026-07-12
-- **PR:** _pending_ · **Issue:** #137 (closed) · amends #84 (motion layer)
+- **PR:** [#138](https://github.com/vik8174/solar-drift/pull/138) · **Issue:** #137 (closed) · amends #84 (motion layer)
 - **What:** on mobile, selecting a new city made the big deviation number look like it rendered
   several times; desktop was clean. **Not** a real re-render — instrumentation (Playwright Chromium /
   Pixel 5) showed exactly **one** navigation and **one** value swap (`+68` → `-13`). The visual
