@@ -5,7 +5,7 @@
  * module owns just the two testable rules — which strategy the current browser
  * can use, and the exact URL to share — leaving the page `<script>` a thin
  * adapter that calls `navigator.share` / `navigator.clipboard` (D-001, the twin
- * of the geo and support-dismiss adapters).
+ * of the geo adapter).
  */
 
 /** How the current browser can share: OS sheet, clipboard copy, or nothing. */
