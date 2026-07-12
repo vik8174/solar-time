@@ -6,6 +6,29 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix — hero entrance no longer replays on city→city nav (mobile multi-render feel)
+
+- **Date:** 2026-07-12
+- **PR:** [#138](https://github.com/vik8174/solar-drift/pull/138) · **Issue:** #137 (closed) · amends #84 (motion layer)
+- **What:** on mobile, selecting a new city made the big deviation number look like it rendered
+  several times; desktop was clean. **Not** a real re-render — instrumentation (Playwright Chromium /
+  Pixel 5) showed exactly **one** navigation and **one** value swap (`+68` → `-13`). The visual
+  doubling was **two overlapping "appear" animations on the new number**: the default View-Transition
+  crossfade (`::view-transition-new(root)` fading in over the old snapshot with `plus-lighter`) plus
+  the CSS `rise` **entrance** (#84). `<main>` is swapped on every ClientRouter nav, so the _one-time_
+  entrance replayed on **every** city→city navigation; desktop paints fast enough to hide the overlap,
+  slower mobile hardware doesn't.
+- **Fix:** keep the entrance to a genuine fresh load — a new `suppressHeroEntrance(doc)`
+  (`src/lib/heroEntrance.ts`) strips `.entrance` from the incoming document, called from
+  `Base.astro`'s `astro:before-swap` listener. Navigations get the clean crossfade alone; the first
+  load still animates (it renders server-side with the class, before any swap). Verified on
+  Chromium/Pixel 5: `rise` fires **0×** on nav, **1×** on first load; navigation still lands on the
+  target city.
+- **Scope:** `src/lib/heroEntrance.ts` (+ test), `src/layouts/Base.astro`. Related-but-untouched: the
+  solar-noon dot `noon-pulse` also replays per nav (subtle, not reported) — left for a follow-up.
+- **Gate:** typecheck/lint/format green, 381 tests (+3), coverage 99.75%/95.62%. No ADR — behavior
+  polish within #84's motion layer, no contract change.
+
 ## Fix — mobile suggestion tap navigates (real fix; #134 was ineffective on device)
 
 - **Date:** 2026-07-12
