@@ -166,6 +166,7 @@ const structuredData = jsonLd && site ? jsonLd(site.href) : undefined;
 
 <script>
   import { startDeferredInit, trackEvent } from '../scripts/deferredInit';
+  import { suppressHeroEntrance } from '../lib/heroEntrance';
 
   /**
    * Analytics + error-monitoring mount (D-008, D-021). Runs once per full load
@@ -180,6 +181,14 @@ const structuredData = jsonLd && site ? jsonLd(site.href) : undefined;
 
   document.addEventListener('astro:page-load', () => {
     trackEvent('page_view', { path: window.location.pathname });
+  });
+
+  // Keep the hero's one-time "sunrise" entrance (#84) to a genuine fresh load: on
+  // a client-side View-Transition navigation the swapped-in `.hero.entrance` would
+  // replay `rise` over the default crossfade, reading as a double/janky re-render
+  // on mobile. See `suppressHeroEntrance`.
+  document.addEventListener('astro:before-swap', (event) => {
+    suppressHeroEntrance(event.newDocument);
   });
 </script>
 
