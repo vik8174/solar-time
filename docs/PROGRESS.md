@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Fix #126 — Back-nav to `/` showed a stale "In sync"
 
 - **Date:** 2026-07-12
-- **PR:** _pending_ · **Issue:** #126 (`bug`, `afk`)
+- **PR:** [#127](https://github.com/vik8174/solar-drift/pull/127) · **Issue:** #126 (`bug`, `afk`)
 - **What:** the home geo island (`src/pages/index.astro` `<script>`) ran its recompute at **module
   scope**, inside a one-shot `if (root && button && hint) { … }`. Astro runs a module `<script>` **once
   per full load** and does **not** re-run it across a View-Transition navigation, so on **Back** to `/`
