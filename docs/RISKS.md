@@ -296,3 +296,18 @@ before, because `astro dev` in a worktree never got far enough to matter (the is
 fix is a per-worktree `vite.cacheDir` (outside the symlinked `node_modules`) in `astro.config.mjs`,
 deliberately left out of #114 to keep that change small.
 **Related:** R-013 (same symlink, different failure mode — parallel dependency changes).
+
+## R-019 — jsdom can't model tap-focus; mobile focus/tap bugs need real WebKit · mitigated
+
+The #133 mobile-tap bug was first "fixed" in #134 against a **jsdom** unit test that dispatched
+synthetic events. jsdom doesn't model touch focus semantics (on real mobile a tapped `<a>` never
+takes DOM focus, and `pointerup` fires **before** `focusout`), so the test passed while the real fix
+did nothing on device — the owner still couldn't select a city. #135 found the true fix
+(`preventDefault` on the option's `mousedown`) only after reproducing on **Playwright WebKit / iPhone**.
+
+**Mitigation / rule:** for any interaction whose bug hinges on focus/blur/tap ordering, verify on a
+real WebKit engine (`npx playwright install webkit`, iPhone device descriptor) before claiming a fix —
+a green jsdom test is necessary but **not sufficient**. The unit test now asserts the concrete
+contract (`mousedown` default is prevented), which jsdom _can_ model faithfully.
+**Watch:** future combobox/menu/tooltip focus work. WebKit isn't in CI (heavy); it's a manual
+pre-merge check for this class of bug.
