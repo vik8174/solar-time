@@ -245,6 +245,25 @@ untouched, so #87's parallel body work rebases clean). **Invariant unchanged:** 
 is still the build-date SSOT via `ogCardModel` (R-001); the tail just swaps _which image_ the
 `og:image` names, never a number. Amended with #90.
 
+**Amendment (2026-07-12, #131) — one brand OG card for _every_ page; per-city cards deleted.** The
+per-city card baked the deviation **number** into a PNG at build, but that number includes **`dst`
+(±60 min)** and **`equationOfTime` (±~30 min/yr)** — so a card rendered in July showed a **false**
+number when the link was shared/viewed in January, and the raster (unlike the page, D-003) can't
+recompute for today. **Decision:** point **every** page's `og:image`/`twitter:image` at the existing,
+numberless brand card **`/og/home.png`** (which already served the 4000+ tail post-#90) and **delete
+per-city OG generation entirely**. It swaps a "pretty-but-wrong" share preview for an
+"honest-and-fast" one, and drops OG cost from ~1,000 satori renders to **one** (R-010 → resolved).
+**Removed:** `src/pages/og/[slug].png.ts`, `src/lib/ogPolicy.ts` (the top-K SSOT — now moot),
+`src/lib/ogCard.ts` (the city-card text model — now unused), and `renderCityCard`/`cityCard` from
+`renderOgCard.ts`; `seoMeta` lost its `hasOwnOgCard` param (`ogImagePath` is always the brand path).
+**Kept:** `brandCard`/`renderBrandCard` + `og/home.png.ts`, unchanged. **Consequence — #90's top-K
+machinery is fully reverted:** the "one SSOT for membership" note above and the `topOgCitySlugs`
+lockstep are now historical (no consumer derives membership; there is one image for all). **Out of
+scope (flagged):** `<meta description>` still bakes the number (same staleness) — text, not a raster,
+and the owner's ask was the share image; left as a separate content decision, so `seoMeta` still takes
+`d`. **Invariant:** the _page's_ hero number is still the SSOT recompute (R-001/D-003); only the raster
+— which never recomputed — is dropped.
+
 ## D-020 — Environment-based stage/prod split (`SITE_ENV`) · accepted
 
 The site had no way to differ between stage and prod — `build` was identical and

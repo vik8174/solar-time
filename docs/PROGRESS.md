@@ -6,6 +6,40 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix #131 — one brand OG card for every page (drop per-city cards)
+
+- **Date:** 2026-07-12
+- **PR:** _pending_ · **Issue:** #131 (closed) · **Risk:** R-010 (→ resolved) · **ADR:** D-019 (amended)
+- **What:** every page's `og:image`/`twitter:image` now points at the single, numberless brand card
+  **`/og/home.png`**; per-city OG generation is deleted. Fixes a correctness bug **and** cuts the build.
+  - **Why (staleness bug):** `/og/[slug].png` baked `computeDeviation` → the deviation number into a PNG
+    at build. That number includes **`dst` (±60 min)** and **`equationOfTime` (±~30 min over the year)**,
+    so a card rendered in July ("Prague +67 min") showed a **false** number when the link was shared/viewed
+    in January — and that raster _is_ the social-unfurl preview. A raster can't recompute for today the way
+    the page's inline script does (D-003), so the honest fix is a card with no number. The brand card already
+    served the 4000+ tail (post-#90); this just extends it to the top-1000 too — one image for everyone.
+  - **Why (build weight):** the top-K path ran **~1,000 satori/resvg renders** every build (~130 s of the
+    2m28s #90 build, R-010). Now it's **one** render. Measured local `npm run build`: **9.19 s** for 5,119
+    pages + **1** PNG (vs the ~2m28s recorded for 5,119 pages + 1,000 PNGs) — the ~1,000 per-city renders
+    are gone.
+- **Scope (deletion + simplification):**
+  - `src/lib/seoMeta.ts` — dropped the `hasOwnOgCard` param; `ogImagePath` is **always** `BRAND_OG_PATH`
+    (`/og/home.png`). `d` stays — it still drives the `<meta description>` (out of scope, see below).
+    `seoMeta.test.ts` updated (per-city/tail OG assertions → "always brand card").
+  - `src/pages/[city].astro` — removed `topOgCitySlugs`/`ogSlugs`/`hasOwnOgCard`; calls `seoMeta({name,slug}, deviation)`.
+  - **Deleted:** `src/pages/og/[slug].png.ts`, `src/lib/ogPolicy.ts`(+test), `src/lib/ogCard.ts`(+test).
+  - `src/og/renderOgCard.ts` — removed `renderCityCard` + `cityCard` + their sizing helpers
+    (`valueFontSize`/`UNIT_FONT_SIZE`/`unitBaselineNudge`) + the now-unused `OgCardModel` import and
+    `COLOR.text`. **Kept** `brandCard` + `renderBrandCard`. `src/pages/og/home.png.ts` unchanged.
+- **Out of scope (flagged):** `<meta name="description">` **also** bakes the number (same staleness) — but
+  it's text, not a raster, and the owner's ask was specifically about the share _image_. Left as-is; making
+  it evergreen is a separate content decision. `seoMeta` still takes `d` for it.
+- **Verified:** `dist/og/` has **only `home.png`** (no `/og/<slug>.png`); every sampled city page
+  (prague/tokyo) emits `og:image`+`twitter:image` = `…/og/home.png`. Grep clean — no `ogPolicy`/`ogCard`/
+  `renderCityCard`/`topOgCitySlugs`/`hasOwnOgCard` refs left. Gate green (typecheck/lint/format/tests);
+  coverage stays green — the two deleted `src/lib` files were fully covered, so removing them left no gap
+  (100% lines, branches 95.62% ≥ 80).
+
 ## Chore — v1 launch prep: hide donation + set prod domain
 
 - **Date:** 2026-07-12
