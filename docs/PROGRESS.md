@@ -6,6 +6,49 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Feat #84 — Restrained motion layer (3 animations)
+
+- **Date:** 2026-07-12
+- **PR:** _pending_ · **Issue:** #84 (`enhancement`, `afk`)
+- **What:** a calm, polish-not-spectacle motion layer, all `transform`/`opacity` only (GPU-composited,
+  zero layout shift), speaking one language via new motion tokens in `tokens.css` (D-006 SSOT):
+  `--motion-fast` (180ms), `--motion-base` (400ms), `--motion-pulse` (1.4s), `--ease-out`. No ADR —
+  motion tokens extend D-006 like #83's spacing scale.
+  1. **Hero entrance** (rise+fade, `--motion-base`, once): `HeroNumber.astro` gained an `entrance`
+     prop. Default `true` on `/[city]` (the SSR value is stable and _is_ the real answer). The old
+     unconditional `.hero { animation: rise 0.7s }` moved behind `.hero.entrance`.
+  2. **Solar-noon dot pulse** (`SolarScale.astro`): a single gentle breathe on appear (`--motion-pulse`,
+     not an infinite loop — no noise/battery). The marker is injected via `set:html`
+     (`scaleInnerSvg`, `src/lib` — untouched), so scoped styles can't reach it; targeted through a
+     global `[data-scale] circle[style*='fill:var(--accent)']` hook. `transform-box: fill-box` pivots
+     the scale on the circle's own centre → no position shift. Re-runs on each SVG re-inject (a fresh
+     "appear"), never loops.
+  3. **Value crossfade** (`--motion-fast`) on `/`: a `[data-result]` wrapper (eyebrow + number + scale +
+     breakdown) dips opacity and back while `initHome`'s `paint()`/`setEyebrow()` swap the resolved
+     value in — turning the SSG→estimate→📍 jump into a calm crossfade (also smooths the recompute
+     jank). CSS transition on `[data-result]`; the JS timing (`setTimeout`) is gated by
+     `matchMedia('(prefers-reduced-motion: reduce)')`. The step-1 same-city recompute paints directly
+     (nothing visibly changes); only the estimate + 📍 real changes crossfade.
+- **Animation 1 on `/` vs `/[city]` (no loading-state, D-029):** #82 shipped **without** a loading
+  state — the SSR Neutral default is visible immediately (LCP). So on `/` there is no placeholder to
+  wait past, and animating that misleading default would be a lie **and** delay the LCP number. Home
+  therefore passes `entrance={false}`; its meaningful motion is the crossfade when the resolved value
+  lands. The entrance-from-nothing belongs to `/[city]`, where the value is real at SSR. Net: removing
+  the old 700ms opacity-0 entrance from home's LCP element is a small LCP win.
+- **Reduced-motion (two layers, a11y stays 93 ≥ 91):** `tokens.css`'s `@media (prefers-reduced-motion:
+reduce) { * { animation:none; transition:none } }` (wildcard) neutralises all three CSS-driven parts;
+  the crossfade's JS `setTimeout` is _additionally_ gated by `matchMedia` so it paints instantly. Verified
+  by forcing `matchMedia` → the estimate still paints, no stuck `is-swapping`.
+- **Scope:** visual-only — `tokens.css`, `HeroNumber.astro`, `SolarScale.astro`, `index.astro`. No
+  `[city].astro` change: its recompute is a same-value refresh, so the entrance (not a crossfade)
+  carries its motion — anim 3 is scoped to home's multi-step recompute per the ticket. No
+  domain/analytics/`src/lib` change, so no unit-test delta; coverage gate untouched (400 tests, 99.75%).
+- **Verification (`/browser` in the worktree, #114):** `/prague` — entrance plays once (`animation-name:
+rise`, `0.4s`), dot breathes (`noon-pulse`, `1.4s`, `fill-box`); `/` — hero has no entrance
+  (`animation-name: none`, opacity 1 immediately), estimate arrives via crossfade (eyebrow → "Estimated
+  from your time zone", **CLS = 0** measured through the swap). Forced reduced-motion → instant, nothing
+  animates. Both themes × 375 / 768 / 1280. Lighthouse desktop: Accessibility 93, Best Practices 96.
+
 ## Fix #126 — Back-nav to `/` showed a stale "In sync"
 
 - **Date:** 2026-07-12

@@ -57,3 +57,32 @@ const { geometry, solarNoonLabel } = Astro.props;
     }
   }
 </style>
+
+<style is:global>
+  /*
+   * Solar-noon marker: a single gentle breathe on appear (anim 2, #84). The dot
+   * is injected via `set:html` (scaleInnerSvg, src/lib — untouched), so Astro's
+   * scoped styles can't reach it. Target it globally through the unique
+   * [data-scale] hook and the accent fill it always carries. It re-runs each
+   * time the SVG is re-injected on a recompute (a fresh "appear") — never an
+   * infinite loop, so no visual noise or battery drain. `transform-box: fill-box`
+   * pivots the scale on the circle's own centre → zero position shift; only
+   * `transform` animates. prefers-reduced-motion disables it (tokens.css).
+   */
+  [data-scale] circle[style*='fill:var(--accent)'] {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: noon-pulse var(--motion-pulse) var(--ease-out) both;
+  }
+  @keyframes noon-pulse {
+    0% {
+      transform: scale(1);
+    }
+    45% {
+      transform: scale(1.16);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+</style>

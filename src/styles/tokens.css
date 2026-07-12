@@ -54,6 +54,24 @@
   --space-lg: 24px;
   --space-xl: 32px;
   --space-section: clamp(var(--space-lg), 6vw, var(--space-xl));
+
+  /*
+   * motion scale (fix #84) — SSOT for the restrained motion layer.
+   *
+   * A calm, serious tool: motion is polish, never spectacle. One easing and a
+   * few durations cover all three animations (hero entrance, solar-noon dot
+   * pulse, value crossfade) so they speak one language. Everything animates
+   * `transform` / `opacity` only (GPU-composited, no layout shift), and the
+   * @media (prefers-reduced-motion: reduce) block below neutralises the lot.
+   *   --motion-fast  180ms  value crossfade (quick swap, no jump)
+   *   --motion-base  400ms  hero "sunrise" entrance (once, on /[city])
+   *   --motion-pulse 1.4s   single solar-noon dot breathe on appear
+   *   --ease-out            shared easing (settle-out, no overshoot)
+   */
+  --motion-fast: 180ms;
+  --motion-base: 400ms;
+  --motion-pulse: 1400ms;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 @media (prefers-color-scheme: light) {
