@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Fix #131 — one brand OG card for every page (drop per-city cards)
 
 - **Date:** 2026-07-12
-- **PR:** _pending_ · **Issue:** #131 (closed) · **Risk:** R-010 (→ resolved) · **ADR:** D-019 (amended)
+- **PR:** [#132](https://github.com/vik8174/solar-drift/pull/132) (merged) · **Issue:** #131 (closed) · **Risk:** R-010 + R-011 (→ resolved) · **ADR:** D-019 (amended)
 - **What:** every page's `og:image`/`twitter:image` now points at the single, numberless brand card
   **`/og/home.png`**; per-city OG generation is deleted. Fixes a correctness bug **and** cuts the build.
   - **Why (staleness bug):** `/og/[slug].png` baked `computeDeviation` → the deviation number into a PNG
