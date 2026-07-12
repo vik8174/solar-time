@@ -512,3 +512,31 @@ SVG→PNG and adds one exact devDep, **`png-to-ico` (3.0.2)**, for the multi-siz
 `apple-touch-icon` is baked from a **full-bleed opaque square** (radius 0) because iOS composites a
 transparent icon on black and rounds it itself; the tab/PWA icons use the **rounded** badge. Manifest
 `name`/`short_name` = **"Solar Drift"** (post-#94 rename, not the ticket's stale "Solar Time").
+
+## D-029 — `/` is an indexable landing; live-geo result stays client-only · accepted (amends D-005)
+
+_(Drafted as "D-028" in the #82 grill; renumbered to D-029 because #89's brand-mark ADR took D-028
+first — same content, next free number.)_
+
+D-005 made `/` noindex (per-visitor live-geo, no stable URL content). #82 reverses that: `/` keeps
+the **live tool as its hero** but earns indexing by adding stable, crawlable content around it — a
+quiet keyword-led single `<h1>`, a short explainer, a top-24 City directory, and a FAQ — all present
+in the HTML with JS off. The SSR Neutral default (labelled an estimate) means even Googlebot's
+default render is a real, unique page. Consequences: `/` enters the sitemap + index on prod (noindex
+on stage); `FAQPage` JSON-LD ships (D-025), though it no longer yields a SERP rich result (Google
+removed FAQ rich results 2026-05-07) — kept for topical understanding; the WebApplication
+`browserRequirements` claim is dropped as now-false.
+
+**Layout revised during implementation (2026-07-12), owner-approved.** The grill had locked
+"Editorial hero (`<h1>` + intro) on top, tool below". A pre-implementation review found that a wall
+of editorial text above the number buried the tool — the immediacy _is_ the product. Research on how
+real interactive-tool landings rank (time.is, epochconverter, unixtimestamp, whatismyip) converged on
+the opposite arrangement, and it is also SEO-optimal: **the live number is the only thing above the
+fold.** The keyword phrase moves into a **site-wide brand tagline** under the "Solar Drift" wordmark
+in the shared header (`Base.astro`; touches #80's wordmark, owner-approved as a site-wide element),
+and the page's single `<h1>` becomes **"What is solar time?"** in an explainer section _below_ the
+tool — fully visible, just lower in the DOM, which carries full SEO weight (heading size/position is
+not a ranking factor). Hiding text only from users (display:none-for-crawlers) was explicitly
+rejected as spam. The routing split the owner also floated (`/` editorial + noindex `/me` +
+`/coordinates`) was rejected: no comparable site noindexes its live result page, and burying an
+immediacy-first tool one click deep hurts the exact thing that makes it valuable.

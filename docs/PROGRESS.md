@@ -6,6 +6,44 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Feat #82 — `/` becomes an indexable SEO landing (amends D-005)
+
+- **Date:** 2026-07-11
+- **PR:** [#125](https://github.com/vik8174/solar-drift/pull/125) · **Issue:** #82 (`enhancement`, `hitl`)
+- **What:** `/` was `noindex` (D-005): per-visitor live-geo with no stable URL content. #82 turns `/`
+  into a real indexable landing while keeping the live tool as its hero — the **only thing above the
+  fold**. The keyword phrase lives in a **site-wide brand tagline** ("How far your clock is from the
+  sun") under the wordmark (`Base.astro`); the page's single `<h1>` is **"What is solar time?"** in an
+  **explainer** _below_ the tool, followed by a build-time **City directory** (top-24 by population,
+  flat `<a>` grid) and a **Landing FAQ** (2 Q&A). All the editorial content is crawlable HTML present
+  with JS off; the SSR Neutral default makes even Googlebot's default render a real, unique page.
+- **Layout revised mid-flight (D-029, owner-approved 2026-07-12):** the grill had locked an
+  "editorial hero (`<h1>` + intro) on top, tool below" layout; the owner found the text wall buried
+  the number (immediacy is the product). Research on real tool landings (time.is, epochconverter,
+  whatismyip) confirmed the tool-first arrangement is _also_ SEO-optimal — heading size/position is
+  not a ranking factor, below-the-fold prose keeps full SEO weight, and no comparable site noindexes
+  its live-result page (so the `/`+`/me`+`/coordinates` routing split the owner floated was rejected).
+  Net: number-hero above the fold; keyword in a site-wide tagline + the explainer `<h1>`; nothing
+  hidden. Touches #80's shared wordmark (site-wide tagline, owner-approved).
+- **Indexing mechanics:** `noindex={!IS_PROD}` (indexable on prod, `noindex` on stage — like the
+  city pages, D-020); the sitemap filter now **includes** `/` (dropped the `path !== '/'` clause);
+  self-canonical `/` already set. `<title>` stays brand-led; the single `<h1>` ("What is solar time?")
+  carries the keyword, with the phrase also in the site-wide tagline.
+- **JSON-LD (closes the #86 deferral, D-025):** added a pure, tested `faqJsonLd(items)` builder;
+  the home `jsonLd` array now emits **`FAQPage`** verbatim-mirroring the visible FAQ (SSOT =
+  `FAQ_ITEMS` in `index.astro`, now 2 Q&A — "what is solar time" became the explainer `<h1>`). Note:
+  Google removed FAQ rich results (2026-05-07), so this aids topical understanding, not a SERP
+  snippet. Dropped **`browserRequirements: "Requires JavaScript."`** from the `WebApplication`
+  node — false now that the landing serves content JS-off.
+- **HeroNumber** gained an `as?: 'h1' | 'p'` prop (default `h1`, city pages unchanged); the landing
+  passes `as="p"` so the number is not a heading and the explainer `<h1>` is the page's only one.
+- **Decision:** D-029 (`/` indexable landing; live-geo result stays client-only — amends D-005).
+  Drafted as "D-028" in the grill, renumbered because #89 took D-028 first.
+- **Docs:** committed `context.md` (ubiquitous language) + pointer in `AGENTS.md`; ADR D-029.
+- **Verified:** prod build → `/` has no `noindex`, self-canonical, in the sitemap, `FAQPage` valid
+  JSON with `<` escaped, single `<h1>` + 2 FAQ + 24 directory anchors in static HTML; stage build
+  keeps `/` `noindex`.
+
 ## Fix #123 — Remove the dead × (broken dismiss) from the support note
 
 - **Date:** 2026-07-11
