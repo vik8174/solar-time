@@ -51,32 +51,25 @@ describe('CitySearch', () => {
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ slug: 'prague' }));
   });
 
-  it('still navigates when a suggestion is tapped on mobile (link never takes focus)', async () => {
+  it('keeps input focus on a suggestion press so the mobile tap can navigate', async () => {
     const user = userEvent.setup();
-    const { onSelect } = renderSearch();
+    renderSearch();
 
     const input = screen.getByRole('combobox');
     await user.type(input, 'Prague');
     const option = await screen.findByRole<HTMLAnchorElement>('option', { name: /Prague/ });
 
-    // Reproduce the mobile tap ordering with native events (userEvent/fireEvent
-    // abstract away the focus semantics this bug hinges on): a tap fires
-    // `pointerdown` inside the box first, then the input loses focus — on mobile
-    // the tapped <a> never takes DOM focus, so `focusout` carries a null
-    // `relatedTarget` — and only then does `click` land. The box must survive the
-    // blur so the click can navigate; otherwise the <ul> unmounts and the tap does
-    // nothing. Desktop focuses the link on click (relatedTarget = a child), so it
-    // never regressed there.
-    option.dispatchEvent(new Event('pointerdown', { bubbles: true }));
-    input.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
-    // Let Preact flush the focusout-driven re-render before asserting — setState is
-    // async, so a synchronous check would see the pre-unmount DOM and pass falsely.
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    // The fix: the option cancels its `mousedown` default so the input never blurs.
+    // On touch the tapped <a> never takes DOM focus, so without this the input would
+    // blur (`focusout`, null `relatedTarget`), the list would close, and the <ul>
+    // would unmount before the tap's own `click` could navigate — the tap did
+    // nothing. Cancelling mousedown stops the focus-steal, not the click.
+    // (End-to-end proof is a WebKit/iPhone check; jsdom can't model tap-focus, so
+    // here we assert the mousedown default is prevented.)
+    const mousedown = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    option.dispatchEvent(mousedown);
 
-    expect(screen.queryByRole('listbox')).not.toBeNull();
-
-    await user.click(option);
-    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ slug: 'prague' }));
+    expect(mousedown.defaultPrevented).toBe(true);
   });
 
   it('closes the listbox and clears the field after selecting a city', async () => {

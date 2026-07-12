@@ -82,12 +82,6 @@ export default function CitySearch({
   const [open, setOpen] = useState(false);
   const optionRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  // True while a pointer press that began inside the box is still down. On mobile
-  // a tapped result `<a>` never takes DOM focus, so the input blurs with a null
-  // `relatedTarget` and the `focusout` guard below would close the list — unmounting
-  // the link before its own `click` can navigate. This flag lets `focusout` tell a
-  // press-inside (keep open; the ensuing click selects) from a genuine focus-out.
-  const pointerDownInside = useRef(false);
 
   // Load + build the fuzzy index once, after hydration. A failed load is logged
   // and leaves the box inert rather than throwing an unhandled rejection.
@@ -156,30 +150,17 @@ export default function CitySearch({
   return (
     <div
       className="city-search"
-      // Track a pointer press that started inside the box so `focusout` can keep the
-      // list open for the tap's own click (see `pointerDownInside`). `onPointerUp`
-      // and `onPointerCancel` clear it so a later focus-out still closes.
-      onPointerDown={() => {
-        pointerDownInside.current = true;
-      }}
-      onPointerUp={() => {
-        pointerDownInside.current = false;
-      }}
-      onPointerCancel={() => {
-        pointerDownInside.current = false;
-      }}
       // `onFocusOut` (native, bubbling `focusout`) — NOT `onBlur`: Preact attaches
       // `onBlur` as a literal non-bubbling `blur` listener on this div, so it would
       // never fire for focus leaving the inner input (React's synthetic onBlur
       // bubbles; plain Preact's does not). `focusout` bubbles from the input up.
       onFocusOut={(event) => {
-        // A tap inside the box (e.g. a result link on mobile, which never takes DOM
-        // focus) blurs the input with a null `relatedTarget`; keep the list open so
-        // the ensuing click can navigate. The click's `selectCity` closes it.
-        if (pointerDownInside.current) return;
-        // Otherwise close unless focus moved to a child (e.g. a result link on
-        // desktop, which does focus). `relatedTarget` is `EventTarget | null`; narrow
-        // to `Node` so `.contains` stays type-safe and a focus-to-nothing closes.
+        // Close unless focus moved to a child (e.g. a result link). `relatedTarget`
+        // is `EventTarget | null`; narrow to `Node` so `.contains` stays type-safe
+        // and a focus-to-nothing (null) correctly closes the box. A suggestion tap
+        // never reaches here — the option's `onMouseDown` preventDefault keeps focus
+        // in the input (see there); without that, mobile taps blurred to a null
+        // `relatedTarget` and closed the list before the tap's click could navigate.
         const next = event.relatedTarget;
         if (!(next instanceof Node) || !event.currentTarget.contains(next)) setOpen(false);
       }}
@@ -256,6 +237,18 @@ export default function CitySearch({
                   data-astro-prefetch
                   onMouseEnter={() => {
                     setActiveIndex(i);
+                  }}
+                  // Keep focus in the input when the row is pressed. On touch the
+                  // tapped `<a>` never takes DOM focus, so without this the input
+                  // blurs (`focusout`, null `relatedTarget`) and the list closes —
+                  // unmounting this link before its own `click` fires, so the tap did
+                  // nothing (mobile-only; desktop focused the link and stayed open).
+                  // preventDefault on mousedown stops the focus-steal but NOT the
+                  // click, so navigation still runs. Verified on WebKit/iPhone; same
+                  // trick the clear (×) button uses. (Also fires from the emulated
+                  // mousedown after a tap — that's the event that moves focus.)
+                  onMouseDown={(event) => {
+                    event.preventDefault();
                   }}
                   onClick={(event) => {
                     if (onSelect) event.preventDefault();

@@ -6,6 +6,31 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix — mobile suggestion tap navigates (real fix; #134 was ineffective on device)
+
+- **Date:** 2026-07-12
+- **PR:** _pending_ · **Issue:** #135 (closed) · **Risk:** R-019 (new) · supersedes #134
+- **What:** the mobile city-tap bug (#133) shipped a fix in #134 that **did not work on real
+  devices** — the owner confirmed tapping a suggestion still selected nothing. This is the real fix,
+  verified end-to-end on **Playwright WebKit / iPhone 13**.
+- **Why #134 failed:** #134 used a `pointerDownInside` ref, set on `pointerdown` and cleared on
+  `pointerup`, to make `focusout` skip the close. But the real iOS event order is
+  `pointerdown → pointerup → mousedown → focusout(relatedTarget=null)` — `pointerup` fires **before**
+  `focusout`, so the flag was already cleared when `focusout` ran and the guard did nothing. The list
+  still closed before the tap's `click` reached the `<a>`. jsdom couldn't reveal this (it doesn't
+  model tap-focus), so #134's unit test passed green while the bug persisted (→ R-019).
+- **Fix:** `preventDefault()` on the option's **`onMouseDown`** — the emulated event that moves focus
+  after a tap. Cancelling its default stops the input from blurring, so `focusout` never fires, the
+  list stays open, and the `click` navigates. Same technique the clear (×) button already uses.
+  Empirically only `mousedown` works on WebKit (`pointerdown`/`touchstart` don't). #134's dead
+  `pointerDownInside` ref + pointer handlers are removed; `onFocusOut` is back to its simple form.
+- **Verified:** WebKit/iPhone against the local dev server — tap "Tokyo" on `/prague` → navigates to
+  `/tokyo`; event log shows `mousedown@option` then `click@option` with **no `focusout`** and the
+  listbox open throughout (vs stage, where `focusout` closed it and `click` never fired). Gate green
+  (typecheck/lint/format, 378 tests, coverage 99.75%/95.62%). The unit test now asserts the concrete
+  contract — the option's `mousedown` default is prevented (jsdom models this faithfully).
+- **Scope:** `src/components/CitySearch.tsx` (+ `CitySearch.test.tsx`), `docs/RISKS.md` (R-019).
+
 ## Fix — mobile: tapping a city suggestion did nothing (list closed, no nav)
 
 - **Date:** 2026-07-12
