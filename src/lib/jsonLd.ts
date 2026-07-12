@@ -9,7 +9,8 @@
  * Schema must describe the *visible* page (issue #86): no ratings, no reviews,
  * no invented author, and no `potentialAction`/`SearchAction` — the site search
  * is a client island with no `?q=` URL to point a sitelinks searchbox at.
- * `FAQPage` is deliberately absent; it waits on the landing FAQ (#82).
+ * `FAQPage` (`faqJsonLd`) mirrors the landing FAQ verbatim (#82) — its
+ * questions/answers must equal the visible copy, or it is schema that lies.
  */
 
 /** The one JSON-LD vocabulary this site emits. */
@@ -30,6 +31,14 @@ export interface HomeJsonLdInput {
   name: string;
   /** The home page's own meta description — kept in sync with what renders. */
   description: string;
+}
+
+/** One entry of the landing FAQ — must match the visible copy verbatim (D-025). */
+export interface FaqItem {
+  /** The visible question text. */
+  question: string;
+  /** The visible answer text (plain prose). */
+  answer: string;
 }
 
 /** The city a breadcrumb trail terminates at. */
@@ -80,7 +89,6 @@ export const homeJsonLd = ({
       description,
       applicationCategory: 'UtilitiesApplication',
       operatingSystem: 'Any',
-      browserRequirements: 'Requires JavaScript.',
       isAccessibleForFree: true,
       isPartOf: { '@id': websiteId },
     },
@@ -107,6 +115,27 @@ export const cityBreadcrumbJsonLd = ({
     { '@type': 'ListItem', position: 1, name: 'Home', item: absolute(origin, '/') },
     { '@type': 'ListItem', position: 2, name: cityName, item: absolute(origin, `/${slug}`) },
   ],
+});
+
+/**
+ * `FAQPage` for the landing FAQ (#82) — one `Question` per visible Q&A.
+ *
+ * Origin-free: the FAQ carries no URLs, so unlike `homeJsonLd` it needs no
+ * absolutization. The caller passes the *same* items it renders, so the schema
+ * matches the page verbatim (D-025) — the answers are plain prose, not HTML, so
+ * no markup ever reaches `text`.
+ *
+ * @param items - The visible Q&A pairs, in display order.
+ * @returns A `FAQPage` node whose `mainEntity` mirrors the items.
+ */
+export const faqJsonLd = (items: readonly FaqItem[]): JsonLdNode => ({
+  '@context': SCHEMA_CONTEXT,
+  '@type': 'FAQPage',
+  mainEntity: items.map(({ question, answer }) => ({
+    '@type': 'Question',
+    name: question,
+    acceptedAnswer: { '@type': 'Answer', text: answer },
+  })),
 });
 
 /**

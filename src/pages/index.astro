@@ -1,45 +1,82 @@
 ---
 /**
- * Home (`/`) — the live, per-visitor solar-time mode (slice #7).
+ * Home (`/`) — the indexable landing (#82, amends D-005).
  *
- * Server-renders a neutral global default (the largest city) so the first paint
- * is a real, non-blank result. A client island then, in order: (1) recomputes
- * that default for *today* from inlined `data-*` inputs (D-013 pattern — no
- * network, the guaranteed old-browser fallback); (2) upgrades it to the
- * visitor's timezone estimate via the lean `/tz-index.json` + `/geo-index.json`;
- * (3) on "📍" refines to an exact fix via the Geolocation API, labelled
- * "Your location / near {city}". All compute goes through the same
- * `computeDeviation` → `buildCityViewModel` SSOT as the city pages (R-001).
+ * Layout follows the interactive-tool-landing pattern (#82 research: time.is,
+ * epochconverter): the **Live-geo tool** is the visual hero, first under the
+ * shared header (which carries the brand + tagline, `Base.astro`). The crawlable
+ * editorial content sits *below* it — the **explainer** (whose `<h1>` "What is
+ * solar time?" is the page's single, keyword-bearing heading), the **City
+ * directory**, and the **FAQ** — fully visible, just lower in the DOM, which
+ * carries full SEO weight without a wall of text over the number. Heading size
+ * is not a ranking factor, so the number stays hero.
  *
- * `/` stays noindex (D-005): it is per-visitor, not a stable URL.
+ * The tool (slice #7) server-renders a *Neutral default* (the largest city,
+ * labelled an estimate so it never reads as the visitor's own value) that a
+ * client island then, in order: (1) recomputes for *today* from inlined `data-*`
+ * inputs (D-013 — no network, the guaranteed old-browser fallback); (2) upgrades
+ * to the visitor's timezone estimate via `/tz-index.json` + `/geo-index.json`;
+ * (3) on "📍" refines to an exact fix via the Geolocation API. All compute goes
+ * through the same `computeDeviation` → `buildCityViewModel` SSOT as the city
+ * pages (R-001).
+ *
+ * `/` is indexable on prod, `noindex` on stage (`noindex={!IS_PROD}`, like the
+ * city pages, D-020). The live number is explicitly *not* the indexed content.
  */
 import Breakdown from '../components/Breakdown.astro';
 import HeroNumber from '../components/HeroNumber.astro';
 import SolarScale from '../components/SolarScale.astro';
+import { IS_PROD } from '../config/site';
 import { CITIES } from '../data/cities';
 import { computeDeviation } from '../domain/solarTime';
 import Base from '../layouts/Base.astro';
 import { buildCityViewModel } from '../lib/cityViewModel';
-import { homeJsonLd, type JsonLdNode } from '../lib/jsonLd';
+import { faqJsonLd, homeJsonLd, type FaqItem, type JsonLdNode } from '../lib/jsonLd';
 
 // Title + description are consts so the JSON-LD below describes exactly what
-// the `<head>` renders — schema that drifts from the page is spam (#86).
+// the `<head>` renders — schema that drifts from the page is spam (#86). The
+// `<title>` stays brand-led; the `<h1>` (below) leads with the keyword phrase.
 const TITLE = 'Solar Drift — how far your clock is from the sun';
 const DESCRIPTION =
   'See how far your clock runs from true solar time, live for your location — the exact minutes, real solar noon, and the longitude, equation-of-time, and daylight-saving breakdown.';
 
-// WebSite + WebApplication. `/` is noindex today (D-005), so crawlers will only
-// read this once #82 makes the landing indexable — the markup is correct now.
-const jsonLd = (origin: string): readonly JsonLdNode[] =>
-  homeJsonLd({ origin, name: 'Solar Drift', description: DESCRIPTION });
+// The Landing FAQ — the SSOT for both the visible copy and the `FAQPage`
+// JSON-LD, so the structured data matches the page verbatim (D-025). Grounded
+// in the site's own physics (the per-city prose + the deviation breakdown),
+// nothing invented; kept editorially distinct from the per-city sentences.
+// ("What is solar time?" is the explainer `<h1>` above, so it is not repeated
+// here.) Google removed FAQ rich results (2026-05-07); this is for topical
+// understanding, not a SERP snippet.
+const FAQ_ITEMS: readonly FaqItem[] = [
+  {
+    question: 'Why is my clock ahead of or behind the sun?',
+    answer:
+      'Two steady reasons and one seasonal one. Your city usually sits east or west of the meridian its time zone is centred on, which shifts solar noon earlier or later; the Sun runs a little fast or slow through the year (the equation of time); and daylight-saving time adds an hour on top. Added together, they set how far your clock drifts from the sun.',
+  },
+  {
+    question: 'What is the equation of time?',
+    answer:
+      "The equation of time is the gap — up to about 16 minutes either way — between clock-even mean solar time and the true Sun, caused by Earth's tilted axis and its elliptical orbit. It is why solar noon wanders across the year even for a city sitting right on its meridian, and why a sundial can read ahead of or behind the clock depending on the date.",
+  },
+];
 
-// Neutral global default for first paint: the most populous city. Deterministic
-// (population desc, slug tie-break) and immediately replaced client-side by the
-// visitor's timezone estimate, so the exact choice only matters with JS off.
-const neutral = [...CITIES].sort(
+// WebSite + WebApplication (#86) + the FAQPage that verbatim-mirrors FAQ_ITEMS
+// (closes the #82 debt, D-025). `/` is indexable on prod, so crawlers read these.
+const jsonLd = (origin: string): readonly JsonLdNode[] => [
+  ...homeJsonLd({ origin, name: 'Solar Drift', description: DESCRIPTION }),
+  faqJsonLd(FAQ_ITEMS),
+];
+
+// One population-desc sort (slug tie-break) is the SSOT for two things: its head
+// is the Neutral default for first paint, and its top 24 are the City directory.
+const byPopulation = [...CITIES].sort(
   (a, b) => b.population - a.population || (a.slug < b.slug ? -1 : 1),
-)[0];
+);
+const neutral = byPopulation[0];
 if (!neutral) throw new Error('city registry is empty — cannot render the home default');
+// Top 24 by population: a flat crawlable hub of the biggest cities (#82),
+// distinct from #87's per-city same-timezone "related cities".
+const directory = byPopulation.slice(0, 24);
 
 const deviation = computeDeviation({
   longitude: neutral.longitude,
@@ -54,36 +91,82 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
   description={DESCRIPTION}
   canonicalPath="/"
   ogImagePath="/og/home.png"
-  noindex
+  noindex={!IS_PROD}
   support
   jsonLd={jsonLd}
 >
   <main class="page" data-home-longitude={neutral.longitude} data-home-timezone={neutral.timeZone}>
     <div class="content">
-      <p class="eyebrow">
-        <span data-eyebrow-primary>{vm.cityName}</span>
-        <span class="eyebrow-note" data-eyebrow-note>Estimated for your region</span>
-      </p>
-
-      <HeroNumber
-        heroValue={vm.heroValue}
-        showUnit={vm.showUnit}
-        leadText={vm.leadText}
-        solarNoonText={vm.solarNoonText}
-      />
-
-      <SolarScale geometry={vm.geometry} solarNoonLabel={vm.solarNoonLabel} />
-
-      <Breakdown rows={vm.breakdown} />
-
-      <div class="geo">
-        <button type="button" class="geo-button" data-geo-button>📍 Use my location</button>
-        <p class="geo-hint" data-geo-hint hidden></p>
-        <p class="geo-note">
-          Calculated in your browser — your location never leaves it.{' '}
-          <a href="/privacy">Privacy</a>
+      <section class="tool" aria-label="Solar time for your location">
+        <p class="eyebrow">
+          <span data-eyebrow-primary>{vm.cityName}</span>
+          <span class="eyebrow-note" data-eyebrow-note>Estimated for your region</span>
         </p>
-      </div>
+
+        <HeroNumber
+          as="p"
+          heroValue={vm.heroValue}
+          showUnit={vm.showUnit}
+          leadText={vm.leadText}
+          solarNoonText={vm.solarNoonText}
+        />
+
+        <SolarScale geometry={vm.geometry} solarNoonLabel={vm.solarNoonLabel} />
+
+        <Breakdown rows={vm.breakdown} />
+
+        <div class="geo">
+          <button type="button" class="geo-button" data-geo-button>📍 Use my location</button>
+          <p class="geo-hint" data-geo-hint hidden></p>
+          <p class="geo-note">
+            Calculated in your browser — your location never leaves it.{' '}
+            <a href="/privacy">Privacy</a>
+          </p>
+        </div>
+      </section>
+
+      <section class="explainer" aria-labelledby="explainer-heading">
+        <h1 id="explainer-heading">What is solar time?</h1>
+        <p class="intro">
+          Solar time is the time told by the Sun's real position in the sky. Its anchor is solar
+          noon — the moment the Sun is due south and at its highest. Your clock instead follows a
+          fixed time-zone offset, so the two rarely line up exactly. The number above is that gap,
+          live for wherever you are, split into longitude, the equation of time, and daylight
+          saving.
+        </p>
+      </section>
+
+      <section class="directory" aria-labelledby="directory-heading">
+        <h2 id="directory-heading">Solar time by city</h2>
+        <p class="section-lead">
+          The gap between clock and sun for some of the world's largest cities.
+        </p>
+        <ul class="directory-grid">
+          {
+            directory.map((city) => (
+              <li>
+                <a href={`/${city.slug}`} data-astro-prefetch>
+                  {city.name}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+
+      <section class="faq" aria-labelledby="faq-heading">
+        <h2 id="faq-heading">Questions &amp; answers</h2>
+        <dl class="faq-list">
+          {
+            FAQ_ITEMS.map((item) => (
+              <div class="faq-item">
+                <dt>{item.question}</dt>
+                <dd>{item.answer}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </section>
     </div>
   </main>
 
@@ -270,6 +353,105 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
       width: 100%;
       max-width: var(--content-max);
     }
+
+    /* Live-geo tool — the interactive hero, first thing under the shared header
+       (the keyword <h1> lives in the explainer below; the brand tagline is in the
+       header). Heading size is not a ranking factor (#82 research), so nothing
+       needs to sit above the number. */
+    .tool {
+      margin-top: 0;
+    }
+
+    /* Explainer — the "what is solar time?" <h1> + definition, BELOW the tool
+       (fully visible, just lower in the DOM: full SEO weight, no wall above the
+       number). Its <h1> is the page's single heading. */
+    .explainer {
+      margin-top: var(--space-section);
+    }
+    .intro {
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--muted);
+      max-width: 46ch;
+      margin: var(--space-sm) auto 0;
+      text-align: center;
+      text-wrap: pretty;
+    }
+
+    /* Shared heading style for the explainer <h1> + directory/FAQ <h2>s. */
+    .explainer h1,
+    .directory h2,
+    .faq h2 {
+      font-family: var(--sans);
+      font-size: 20px;
+      line-height: 1.2;
+      color: var(--text);
+      text-align: center;
+      margin: 0;
+    }
+    .section-lead {
+      font-family: var(--sans);
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--muted);
+      text-align: center;
+      max-width: 42ch;
+      margin: var(--space-xs) auto 0;
+    }
+
+    /* City directory — a flat, crawlable grid of the top-24-by-population links. */
+    .directory {
+      margin-top: var(--space-section);
+    }
+    .directory-grid {
+      list-style: none;
+      padding: 0;
+      margin: var(--space-lg) 0 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 2px var(--space-md);
+    }
+    .directory-grid a {
+      display: block;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 6px 0;
+      transition: color 0.2s;
+    }
+    .directory-grid a:hover {
+      color: var(--accent);
+    }
+
+    /* Landing FAQ — always-open Q&A; its copy is the FAQPage JSON-LD's SSOT. */
+    .faq {
+      margin-top: var(--space-section);
+    }
+    .faq-list {
+      margin: var(--space-lg) 0 0;
+    }
+    .faq-item + .faq-item {
+      margin-top: var(--space-md);
+      padding-top: var(--space-md);
+      border-top: 1px solid var(--hairline);
+    }
+    .faq-item dt {
+      font-family: var(--sans);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0;
+    }
+    .faq-item dd {
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--muted);
+      margin: var(--space-xs) 0 0;
+    }
+
     .eyebrow {
       font-family: var(--mono);
       font-size: 12px;
@@ -332,11 +514,17 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
       color: var(--muted);
     }
 
-    /* Mobile: the primary action gets a full 44px touch target. */
+    /* Mobile: the primary action + directory links get a full 44px touch target. */
     @media (max-width: 480px) {
       .geo-button {
         min-height: var(--tap-min);
         padding: 9px 20px;
+      }
+      .directory-grid a {
+        display: flex;
+        align-items: center;
+        min-height: var(--tap-min);
+        padding: 0;
       }
     }
   </style>

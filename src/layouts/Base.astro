@@ -124,6 +124,7 @@ const structuredData = jsonLd && site ? jsonLd(site.href) : undefined;
         <span class="brand-mark" aria-hidden="true" set:html={brandMark} />
         Solar Drift
       </a>
+      <p class="site-tagline">How far your clock is from the sun</p>
       <CitySearch client:idle />
     </header>
     <slot />
@@ -191,7 +192,6 @@ const structuredData = jsonLd && site ? jsonLd(site.href) : undefined;
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: var(--space-sm);
     font-family: var(--mono);
     font-size: 15px;
     letter-spacing: 0.04em;
@@ -200,6 +200,19 @@ const structuredData = jsonLd && site ? jsonLd(site.href) : undefined;
   }
   .site-wordmark:hover {
     color: var(--accent);
+  }
+  /*
+   * Site-wide brand tagline under the wordmark (#82). Quiet + sans so it reads as
+   * a tagline, not a heading — it is NOT the page <h1> (the header is shared and
+   * transition:persisted across every page; each page owns its own single h1).
+   */
+  .site-tagline {
+    margin: 4px 0 var(--space-sm);
+    font-family: var(--sans);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+    text-align: center;
   }
   /*
    * The brand badge (#89) — same sundial-on-tile SVG as the favicon, so the mark

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   cityBreadcrumbJsonLd,
+  faqJsonLd,
   homeJsonLd,
   SCHEMA_CONTEXT,
   serializeJsonLd,
@@ -61,6 +62,11 @@ describe('homeJsonLd', () => {
     expect(field(app, 'isAccessibleForFree')).toBe(true);
   });
 
+  it('claims no browserRequirements — the landing serves content JS-off (#82)', () => {
+    const app = homeJsonLd(home)[1] as JsonLdNode;
+    expect(field(app, 'browserRequirements')).toBeUndefined();
+  });
+
   it('claims no rating, review, offer, author, or search action', () => {
     const serialized = serializeJsonLd(homeJsonLd(home));
     for (const banned of ['aggregateRating', 'review', 'offers', 'author', 'potentialAction']) {
@@ -107,6 +113,47 @@ describe('cityBreadcrumbJsonLd', () => {
     const crumbs = cityBreadcrumbJsonLd({ ...prague, cityName: 'São Paulo', slug: 'são-paulo' });
     const items = field(crumbs, 'itemListElement') as { item: string }[];
     expect(items[1]?.item).toBe('https://solar-time-prod.web.app/s%C3%A3o-paulo');
+  });
+});
+
+describe('faqJsonLd', () => {
+  const items = [
+    { question: 'What is solar time?', answer: 'Time told by the sun.' },
+    { question: 'Why is my clock ahead of the sun?', answer: 'Longitude and DST.' },
+  ] as const;
+
+  it('emits a FAQPage in the schema.org context', () => {
+    const faq = faqJsonLd(items);
+    expect(faq['@type']).toBe('FAQPage');
+    expect(faq['@context']).toBe(SCHEMA_CONTEXT);
+  });
+
+  it('maps each item to a Question with an accepted Answer, in order', () => {
+    expect(field(faqJsonLd(items), 'mainEntity')).toEqual([
+      {
+        '@type': 'Question',
+        name: 'What is solar time?',
+        acceptedAnswer: { '@type': 'Answer', text: 'Time told by the sun.' },
+      },
+      {
+        '@type': 'Question',
+        name: 'Why is my clock ahead of the sun?',
+        acceptedAnswer: { '@type': 'Answer', text: 'Longitude and DST.' },
+      },
+    ]);
+  });
+
+  it('carries question/answer text verbatim so it matches the visible FAQ (D-025)', () => {
+    const q = { question: 'Bath & Wells <b>?', answer: 'A & B < C.' } as const;
+    const entity = (
+      field(faqJsonLd([q]), 'mainEntity') as { name: string; acceptedAnswer: { text: string } }[]
+    )[0];
+    expect(entity?.name).toBe('Bath & Wells <b>?');
+    expect(entity?.acceptedAnswer.text).toBe('A & B < C.');
+  });
+
+  it('emits an empty mainEntity for no items', () => {
+    expect(field(faqJsonLd([]), 'mainEntity')).toEqual([]);
   });
 });
 

@@ -70,15 +70,13 @@ export default defineConfig({
   prefetch: { defaultStrategy: 'hover' },
   integrations: [
     preact(),
-    // Sitemap is prod-only (D-019). Exclude the noindex home (`/`, D-005) and
-    // the non-page endpoints (anything with a file extension: *.png/*.json/etc).
+    // Sitemap is prod-only (D-019). `/` is now an indexable landing (#82 / D-029),
+    // so it belongs in the sitemap; only the non-page endpoints stay excluded
+    // (anything with a file extension: *.png/*.json/etc).
     ...(IS_PROD
       ? [
           sitemap({
-            filter: (page) => {
-              const path = new URL(page).pathname;
-              return path !== '/' && !/\.[a-z0-9]+$/i.test(path);
-            },
+            filter: (page) => !/\.[a-z0-9]+$/i.test(new URL(page).pathname),
           }),
         ]
       : []),

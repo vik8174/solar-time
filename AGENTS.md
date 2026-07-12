@@ -26,6 +26,9 @@ Manage the background server with `astro dev stop`, `astro dev status`, and `ast
 
 ## Documentation
 
+Ubiquitous language (terms shared across code, docs, and UI) lives in
+[`context.md`](context.md) — read it before naming things or writing UI copy.
+
 Full documentation: https://docs.astro.build
 
 Consult these guides before working on related tasks:

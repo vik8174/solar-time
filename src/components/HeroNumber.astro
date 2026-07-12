@@ -11,16 +11,23 @@ interface Props {
   showUnit: boolean;
   leadText: string;
   solarNoonText: string;
+  /**
+   * Heading level for the number. `/[city]` keeps the default `h1` — there the
+   * number *is* the page title. The landing (`/`, #82) passes `p`: its editorial
+   * `<h1>` is the page's single heading, so the number must not emit one too.
+   */
+  as?: 'h1' | 'p';
 }
-const { heroValue, showUnit, leadText, solarNoonText } = Astro.props;
+const { heroValue, showUnit, leadText, solarNoonText, as = 'h1' } = Astro.props;
+const Tag = as;
 ---
 
 <div class="hero-block">
-  <h1 class="hero" class:list={[{ synced: !showUnit }]}>
+  <Tag class="hero" class:list={[{ synced: !showUnit }]}>
     <span data-hero-value>{heroValue}</span><span class="unit" data-hero-unit hidden={!showUnit}
       >min</span
     >
-  </h1>
+  </Tag>
   <p class="lead" data-lead>{leadText}</p>
   <p class="solar-noon" data-solar-noon>{solarNoonText}</p>
 </div>
