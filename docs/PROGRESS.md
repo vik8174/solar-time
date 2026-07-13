@@ -6,6 +6,39 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix — skeleton the home live-result region (kill the first-paint "In sync" flash)
+
+- **Date:** 2026-07-13
+- **PR:** _pending_ · **Issue:** #141 · amends #82 landing / D-029 / #84 motion / #126 re-entrancy
+- **What:** on first load of `/`, the hero flashed a misleading **"In sync / Shanghai"** (the SSR
+  Neutral default, `byPopulation[0]`, whose build-time deviation rounds to `In sync`) for ~360 ms
+  before the `initHome` island resolved the visitor's real value and crossfaded it in. Measured
+  (Playwright, tz faked `America/New_York`): `+56ms "In sync | Shanghai"` → `+420ms "+62 | New York
+City"`. Not a real error — the intended progressive-enhancement default (D-029) — but the
+  placeholder was a real-looking _wrong_ value, so it read as broken.
+- **Fix:** the `[data-result]` region now SSRs with an `is-loading` class → the **first paint is a
+  shimmer skeleton**, never "In sync". The real Neutral values stay in the DOM inside a `[data-live]`
+  wrapper (hidden while loading); a `[data-skeleton]` sibling holds the placeholder bars. The island
+  gained an idempotent `reveal()` (drops `is-loading`) called when the visitor's value resolves (step
+  2 / 📍), when step 2's fetch **fails** (surfaces the step-1 Neutral, still "Estimated"), or behind a
+  **1.2 s safety timeout** — whichever first, so a JS visitor is never stranded on a skeleton. Reveal
+  reuses the #84 crossfade (skeleton dips out, value fades in as one motion). A `<noscript>` style
+  flips the toggle so **no-JS** visitors see the real Neutral, never a stuck skeleton. Shimmer is gated
+  behind `prefers-reduced-motion: no-preference` → **reduced motion gets a static skeleton**. All
+  skeleton reads/writes are `root`-scoped, so Back/Forward to `/` (fresh `<main>` re-SSRs `is-loading`)
+  re-reveals cleanly (#126).
+- **Proof (Playwright, real engines — Chromium + WebKit, tz `America/New_York`):** first painted
+  result state is the skeleton (`loading=true, live hidden`); the hero **never** shows "In sync" while
+  visible; it reveals `+62 / New York City`. No-JS → real Neutral visible, skeleton hidden.
+  Reduced-motion → `::after` shimmer absent, still reveals via the safety timeout. Back/Forward to `/`
+  → not stuck, no "In sync" re-flash, shows the resolved NY value. Skeleton + resolved screenshots
+  attached to the PR.
+- **Scope:** `src/pages/index.astro` only (markup, island reveal logic, skeleton CSS). `/[city]` is
+  untouched — it SSRs its real baked value and has no such flash. No new `src/lib` logic (reveal is
+  DOM orchestration, verified end-to-end on real engines rather than in jsdom).
+- **Gate:** typecheck/lint/format green, 385 tests, coverage 99.76%/94.89% (unchanged — no logic
+  dir touched). No ADR — no contract change; keeps the D-029 default and #84 motion language.
+
 ## Fix — recompute the city deviation on every nav (stale DST on navigated-to pages)
 
 - **Date:** 2026-07-13
