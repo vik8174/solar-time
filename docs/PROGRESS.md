@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Verify — post-deploy SEO / indexability on `solardrift.app` (R-006 resolved)
 
 - **Date:** 2026-07-13
-- **PR:** _pending_ · **Issue:** #145 (closed) · **Risk:** R-006 (resolved)
+- **PR:** [#146](https://github.com/vik8174/solar-drift/pull/146) · **Issue:** #145 (closed) · **Risk:** R-006 (resolved)
 - **What:** acceptance check run right after `deploy:prod` put current `main` on the custom
   domain. Confirms the #82 landing is actually indexable on the real domain (not just in a local
   prod build) — the worry that opened #145 (a Lighthouse "blocked from indexing" flag, which was
