@@ -6,6 +6,29 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Fix — recompute the city deviation on every nav (stale DST on navigated-to pages)
+
+- **Date:** 2026-07-13
+- **PR:** _pending_ · **Issue:** #139 (closed) · guards R-001 · twin of #127
+- **What:** the city page bakes its deviation at build time and a client script recomputes it for
+  _today_ so daylight-saving flips stay correct (R-001, D-003/D-004). That recompute ran at
+  **top-level module scope**, which Astro executes **once** on the initial load and **not** on
+  View-Transition navigations — so any city reached by **in-app navigation** (search-select,
+  related-city link) showed its **build-time** value, DST and all. A navigated-to page was off by the
+  whole DST offset (~60 min) for ~half the year (whenever viewing-DST ≠ build-DST); the daily
+  equation-of-time drift was stale too.
+- **Proof (Playwright, clock faked to winter, Europe DST off):** `/zuerich` fresh load recomputed
+  `+91/dst+60` → `+34/dst 0` ✓; but `/geneva` reached by navigation stayed `+101/dst+60` while a fresh
+  `/geneva` was `+44/dst 0`. After the fix, the navigated value matches the fresh one (`dst 0`).
+- **Fix:** run the recompute on `astro:page-load` (fires on the initial load **and** every nav),
+  the twin of the share adapter in the same file and the same fix #127 made for the home island. The
+  DOM-patching logic is extracted to `src/lib/cityRecompute.ts` (`recomputeCityView(doc, now)`) so it
+  is unit-tested: a jsdom test asserts the DST component is `+60` in summer and `0` in winter and that
+  the hero flips between them.
+- **Scope:** `src/pages/[city].astro` (script now a thin `page-load` wrapper), new
+  `src/lib/cityRecompute.ts` (+ test). Gate green: typecheck/lint/format, 385 tests (+4), coverage
+  99.76%/94.89%. No ADR — restores the intended R-001 behavior; no contract change.
+
 ## Fix — hero entrance no longer replays on city→city nav (mobile multi-render feel)
 
 - **Date:** 2026-07-12
