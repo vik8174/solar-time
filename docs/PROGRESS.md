@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Fix — skeleton the home live-result region (kill the first-paint "In sync" flash)
 
 - **Date:** 2026-07-13
-- **PR:** _pending_ · **Issue:** #141 · amends #82 landing / D-029 / #84 motion / #126 re-entrancy
+- **PR:** [#144](https://github.com/vik8174/solar-drift/pull/144) · **Issue:** #141 (closed) · amends #82 landing / D-029 / #84 motion / #126 re-entrancy
 - **What:** on first load of `/`, the hero flashed a misleading **"In sync / Shanghai"** (the SSR
   Neutral default, `byPopulation[0]`, whose build-time deviation rounds to `In sync`) for ~360 ms
   before the `initHome` island resolved the visitor's real value and crossfaded it in. Measured
