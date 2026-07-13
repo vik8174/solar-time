@@ -50,7 +50,7 @@ needed. **Decision (2026-07-07):** the personal account is the **permanent** hom
 Viktor's own project, so a work/org account is deliberately out of scope. Status → `accepted`;
 the residual is only the recurring pre-deploy account check, not a pending decision.
 
-## R-006 — Custom domain not yet acquired · open
+## R-006 — Custom domain not yet acquired · resolved
 
 Skeleton/stage run on `*.web.app`. Custom domain (.app or .com, ~$12/yr) deferred to
 the release slice. **Action:** buy + wire DNS + Firebase custom domain at release;
@@ -61,6 +61,12 @@ Recommended registrar: Cloudflare (at-cost, ~$14/yr, free WHOIS privacy). **Conf
 `https://solardrift.app` (v1 launch-prep PR). **Remaining owner steps to fully resolve:**
 buy the domain → attach in the Firebase console → confirm DNS/SSL live → run `deploy:prod`.
 Once the domain serves the prod build, mark this **resolved**.
+**Resolved (2026-07-13):** `deploy:prod` shipped current `main` to `solardrift.app`
+(`curl -sI` → HTTP 200, fresh build `last-modified 13 Jul 2026 13:09`). Post-deploy SEO
+check (#145) confirmed `/` indexable with the #82 copy, `robots.txt`/sitemap on-domain
+(5119 city URLs, 0 off-domain), city pages indexable with JSON-LD + meta description, and
+Lighthouse mobile **SEO 100 / `is-crawlable` PASS** on both `/` and a city page. Domain
+serves the prod build → R-006 resolved.
 
 ## R-007 — Repo still private · resolved
 

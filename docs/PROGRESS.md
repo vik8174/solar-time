@@ -6,6 +6,24 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
+## Verify — post-deploy SEO / indexability on `solardrift.app` (R-006 resolved)
+
+- **Date:** 2026-07-13
+- **PR:** _pending_ · **Issue:** #145 (closed) · **Risk:** R-006 (resolved)
+- **What:** acceptance check run right after `deploy:prod` put current `main` on the custom
+  domain. Confirms the #82 landing is actually indexable on the real domain (not just in a local
+  prod build) — the worry that opened #145 (a Lighthouse "blocked from indexing" flag, which was
+  really against the `noindex`-by-design stage env, D-020).
+- **Result — all green on `https://solardrift.app`:** domain live (`curl -sI` → HTTP 200, fresh
+  build `last-modified 13 Jul 2026 13:09`); `/` has **no `robots` meta** (indexable) and carries the
+  #82 copy ("What is solar time?" / "Questions & answers" / "Solar time by city"); `robots.txt` =
+  `Allow: /` + on-domain `Sitemap:`; `sitemap-index.xml` → `sitemap-0.xml` (200) lists **5119** city
+  URLs, **0** off-domain; city pages (`/geneva`, `/tokyo`) indexable with JSON-LD + meta description;
+  Lighthouse **mobile SEO 100 / `is-crawlable` PASS** on both `/` and a city page; canonical + OG:url
+  point at `solardrift.app` on both. The original "blocked from indexing" flag is green on the real
+  domain — the earlier flag was stage (`noindex` by design), not a regression.
+- **No code change** — pure post-deploy verification. Doc-only: closes #145, flips R-006 → resolved.
+
 ## Fix — skeleton the home live-result region (kill the first-paint "In sync" flash)
 
 - **Date:** 2026-07-13
