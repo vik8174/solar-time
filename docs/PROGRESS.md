@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Chore — bump version 0.0.1 → 1.0.0 (v1 shipped)
 
 - **Date:** 2026-07-13
-- **PR:** _pending_ · **Outcome:** shipped
+- **PR:** [#147](https://github.com/vik8174/solar-drift/pull/147) · **Outcome:** shipped
 - **What:** v1 is live on `solardrift.app` (R-006 resolved), so the app version graduates from the
   pre-release `0.0.1` to **`1.0.0`**. Bumped via `npm version 1.0.0 --no-git-tag-version`, which
   updated `package.json` and the root package entry in `package-lock.json` only — dependency versions
