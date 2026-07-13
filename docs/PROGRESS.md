@@ -9,7 +9,7 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 ## Fix — recompute the city deviation on every nav (stale DST on navigated-to pages)
 
 - **Date:** 2026-07-13
-- **PR:** _pending_ · **Issue:** #139 (closed) · guards R-001 · twin of #127
+- **PR:** [#140](https://github.com/vik8174/solar-drift/pull/140) · **Issue:** #139 (closed) · guards R-001 · twin of #127
 - **What:** the city page bakes its deviation at build time and a client script recomputes it for
   _today_ so daylight-saving flips stay correct (R-001, D-003/D-004). That recompute ran at
   **top-level module scope**, which Astro executes **once** on the initial load and **not** on
