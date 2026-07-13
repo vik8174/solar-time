@@ -102,26 +102,64 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
           /* The resolved-value region — the eyebrow + number + scale + breakdown
             all repaint together (SSG default → timezone estimate → 📍 fix), so
             they crossfade as one unit (anim 3, #84). The 📍 control below stays
-            outside so it never fades mid-interaction. */
+            outside so it never fades mid-interaction.
+
+            First paint is a *skeleton* (#141): `is-loading` is the SSR default,
+            so the very first paint shows the shimmer placeholder — never the
+            misleading Neutral default ("In sync / Shanghai"). The island reveals
+            it (removes `is-loading`) once the visitor's value resolves, or its
+            fetch fails, or a safety timeout fires — whichever first. The real
+            Neutral values stay in the DOM inside `[data-live]`; the `<noscript>`
+            below reveals them for no-JS visitors so they never see a stuck
+            skeleton. */
         }
-        <div class="result" data-result>
-          <p class="eyebrow">
-            <span data-eyebrow-primary>{vm.cityName}</span>
-            <span class="eyebrow-note" data-eyebrow-note>Estimated for your region</span>
-          </p>
+        <noscript>
+          <style>
+            /* No-JS: the island never runs to remove `is-loading`, so force the
+               real Neutral value visible and drop the skeleton. Bare classes +
+               !important beat the (non-important) scoped loading toggle. */
+            .result.is-loading .result-live {
+              display: block !important;
+            }
+            .result.is-loading .result-skeleton {
+              display: none !important;
+            }
+          </style>
+        </noscript>
+        <div class="result is-loading" data-result aria-busy="true">
+          <div class="result-skeleton" data-skeleton aria-hidden="true">
+            <span class="sk sk-eyebrow"></span>
+            <span class="sk sk-hero"></span>
+            <span class="sk sk-lead"></span>
+            <span class="sk sk-noon"></span>
+            <span class="sk sk-scale"></span>
+            <div class="sk-rows">
+              <span class="sk sk-row"></span>
+              <span class="sk sk-row"></span>
+              <span class="sk sk-row"></span>
+              <span class="sk sk-row sk-row-total"></span>
+            </div>
+          </div>
 
-          <HeroNumber
-            as="p"
-            entrance={false}
-            heroValue={vm.heroValue}
-            showUnit={vm.showUnit}
-            leadText={vm.leadText}
-            solarNoonText={vm.solarNoonText}
-          />
+          <div class="result-live" data-live>
+            <p class="eyebrow">
+              <span data-eyebrow-primary>{vm.cityName}</span>
+              <span class="eyebrow-note" data-eyebrow-note>Estimated for your region</span>
+            </p>
 
-          <SolarScale geometry={vm.geometry} solarNoonLabel={vm.solarNoonLabel} />
+            <HeroNumber
+              as="p"
+              entrance={false}
+              heroValue={vm.heroValue}
+              showUnit={vm.showUnit}
+              leadText={vm.leadText}
+              solarNoonText={vm.solarNoonText}
+            />
 
-          <Breakdown rows={vm.breakdown} />
+            <SolarScale geometry={vm.geometry} solarNoonLabel={vm.solarNoonLabel} />
+
+            <Breakdown rows={vm.breakdown} />
+          </div>
         </div>
 
         <div class="geo">
@@ -253,6 +291,46 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
         }, fadeMs);
       };
 
+      // Skeleton reveal (#141). `[data-result]` SSRs with `is-loading` so the
+      // first paint is the shimmer skeleton, never the misleading Neutral
+      // default. Revealing (dropping `is-loading`) happens when the visitor's
+      // value resolves (step 2 / 📍), when step 2's fetch fails (surfaces the
+      // step-1 Neutral, still "Estimated"), or by a safety timeout — whichever
+      // first, so a JS visitor is never stuck on a skeleton.
+      //
+      // The reveal is split into a *synchronous* commit and a *deferred* DOM
+      // drop, and that split is load-bearing: `crossfade()` has a single
+      // `fadeTimer` and a newer swap supersedes a pending one. If the safety
+      // fallback and a real-value crossfade both routed through `crossfade`, a
+      // real value resolving inside the ~`--motion-fast` window just before the
+      // timeout would be superseded by the safety fade — silently dropping the
+      // visitor's actual value and stranding them on the Neutral. `commitReveal`
+      // retires the safety timer *synchronously* (before any fade is scheduled),
+      // so once a real path commits, the timeout can no longer fire.
+      let revealed = false;
+      let safetyTimer: ReturnType<typeof setTimeout> | undefined;
+      const commitReveal = (): void => {
+        revealed = true;
+        if (safetyTimer !== undefined) {
+          clearTimeout(safetyTimer);
+          safetyTimer = undefined;
+        }
+      };
+      // Deferred: drop the skeleton so the resolved value shows. Runs inside a
+      // crossfade mutate (during opacity 0), so skeleton → value is one swap.
+      const dropSkeleton = (): void => {
+        result?.classList.remove('is-loading');
+        result?.removeAttribute('aria-busy');
+      };
+      // Reveal the step-1 Neutral fallback (fetch failed / degenerate / safety
+      // timeout): commit synchronously, then crossfade the skeleton out. No-op
+      // once any real value has already committed a reveal.
+      const revealFallback = (): void => {
+        if (revealed) return;
+        commitReveal();
+        crossfade(dropSkeleton);
+      };
+
       const browserTimeZone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone;
       let geoIndex: readonly GeoCity[] | null = null;
       let state: GeoState = initialGeoState;
@@ -342,6 +420,14 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
         return response.json();
       };
 
+      // Safety net (#141): a hung/slow tz-geo fetch must never strand a JS
+      // visitor on the skeleton. If nothing has revealed within this window,
+      // surface whatever the step-1 recompute painted (the Neutral, still
+      // "Estimated"). Reveal via crossfade so it fades in like any resolve.
+      // Cleared the moment a real value reveals, so it never re-fades.
+      const SAFETY_REVEAL_MS = 1200;
+      safetyTimer = setTimeout(revealFallback, SAFETY_REVEAL_MS);
+
       // 2. Upgrade to the visitor's timezone estimate + prime the geo index.
       void (async (): Promise<void> => {
         try {
@@ -366,17 +452,30 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
             const picked = resolveDefaultCity(browserTimeZone(), zones, largest);
             const entry = geoIndex.find((g) => g.slug === picked.slug);
             if (entry) {
-              // Real change (different city/value) → crossfade. The step-1
-              // same-city recompute above paints directly (nothing visibly
-              // changes, so a fade there would just flicker).
+              // Real change (different city/value) → crossfade skeleton → value
+              // and drop the skeleton in the same swap (#141): the skeleton dips
+              // out, the resolved value fades in as one motion. `commitReveal`
+              // runs first, synchronously, so a resolve inside the safety window
+              // retires the timeout before its fade can supersede this one. The
+              // step-1 same-city recompute above painted directly into the
+              // hidden `[data-live]`, so nothing flickered before this.
+              commitReveal();
               crossfade(() => {
                 render(entry.lon, picked.timeZone);
                 setEyebrow(entry.name, 'Estimated from your time zone');
+                dropSkeleton();
               });
+            } else {
+              // No matching geo entry (degenerate) → surface the step-1 Neutral
+              // rather than sit on the skeleton until the safety timeout.
+              revealFallback();
             }
           }
         } catch (error) {
           console.warn('home: timezone estimate failed', error);
+          // Fetch failed → reveal the step-1 Neutral (still "Estimated"), so a
+          // JS visitor never stays on the skeleton for a network error.
+          revealFallback();
         }
         // Permissions pre-check: a pre-blocked visitor sees the search hint, not
         // a button that silently does nothing.
@@ -401,9 +500,14 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
             const nearest = geoIndex ? findNearestCity(lat, lon, geoIndex) : null;
             const label = locatedLabel(nearest);
             // Real change (📍 fix) → crossfade the number/labels in (anim 3, #84).
+            // Also reveal (#141): a visitor who taps 📍 on the skeleton before
+            // the tz estimate lands gets their exact fix straight out of it.
+            // `commitReveal` first (sync) so it retires the safety timeout.
+            commitReveal();
             crossfade(() => {
               render(lon, browserTimeZone());
               setEyebrow(label.primary, label.near ?? '');
+              dropSkeleton();
             });
             // Anonymous "geolocation was used" event — deliberately carries NO
             // coordinates (PRD story 29/30); the fix never leaves the browser.
@@ -452,6 +556,91 @@ const vm = buildCityViewModel({ name: neutral.name, coords: neutral.coords }, de
     }
     .result.is-swapping {
       opacity: 0;
+    }
+
+    /* Skeleton loading state (#141) — `is-loading` is the SSR default on
+       [data-result], so the FIRST paint is this shimmer placeholder, never the
+       misleading Neutral default ("In sync / Shanghai"). The island reveals the
+       real value (removes `is-loading`) once it resolves / fails / times out;
+       the <noscript> above flips these for no-JS visitors. One of skeleton /
+       live is shown at a time, so there is no layout doubling. */
+    .result.is-loading .result-live {
+      display: none;
+    }
+    .result:not(.is-loading) .result-skeleton {
+      display: none;
+    }
+    .result-skeleton {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .sk {
+      background: var(--hairline);
+      border-radius: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+    .sk-eyebrow {
+      width: 150px;
+      height: 12px;
+    }
+    .sk-hero {
+      width: 210px;
+      height: 72px;
+      margin-top: var(--space-lg);
+      border-radius: 10px;
+    }
+    .sk-lead {
+      width: min(320px, 82%);
+      height: 16px;
+      margin-top: 20px;
+    }
+    .sk-noon {
+      width: min(220px, 60%);
+      height: 14px;
+      margin-top: 10px;
+    }
+    .sk-scale {
+      width: 100%;
+      height: 54px;
+      margin-top: clamp(28px, 8vw, 44px);
+      border-radius: 8px;
+    }
+    .sk-rows {
+      width: 100%;
+      max-width: 380px;
+      margin-top: var(--space-section);
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+    .sk-row {
+      width: 100%;
+      height: 16px;
+    }
+    .sk-row-total {
+      height: 22px;
+      margin-top: 6px;
+    }
+    /* Shimmer — a sweeping highlight, gated behind `no-preference` so a
+       reduced-motion visitor gets a static skeleton (plain bars, no sweep). The
+       global reduced-motion rule in tokens.css also neutralises it, so this is
+       belt-and-braces. */
+    @media (prefers-reduced-motion: no-preference) {
+      .sk::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        transform: translateX(-100%);
+        background: linear-gradient(90deg, transparent, var(--axis), transparent);
+        animation: sk-shimmer 1.4s ease-in-out infinite;
+      }
+    }
+    @keyframes sk-shimmer {
+      to {
+        transform: translateX(100%);
+      }
     }
 
     /* Explainer — the "what is solar time?" <h1> + definition, BELOW the tool
