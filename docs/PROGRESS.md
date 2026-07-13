@@ -6,7 +6,16 @@ Format: `## Slice #N — <title>` · date · PR · outcome · notes.
 
 ---
 
-## Verify — post-deploy SEO / indexability on `solardrift.app` (R-006 resolved)
+## Chore — bump version 0.0.1 → 1.0.0 (v1 shipped)
+
+- **Date:** 2026-07-13
+- **PR:** _pending_ · **Outcome:** shipped
+- **What:** v1 is live on `solardrift.app` (R-006 resolved), so the app version graduates from the
+  pre-release `0.0.1` to **`1.0.0`**. Bumped via `npm version 1.0.0 --no-git-tag-version`, which
+  updated `package.json` and the root package entry in `package-lock.json` only — dependency versions
+  (including transitive `0.0.1` packages and `@eslint/js`) are untouched.
+- **Scope:** `package.json`, `package-lock.json`. No code/behaviour change. A `v1.0.0` git tag /
+  GitHub release is a separate, optional step (not done here).
 
 - **Date:** 2026-07-13
 - **PR:** [#146](https://github.com/vik8174/solar-drift/pull/146) · **Issue:** #145 (closed) · **Risk:** R-006 (resolved)
